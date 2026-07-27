@@ -1,0 +1,13 @@
+CDQAI Version 2.0.1 — Documentation and Transparency Update
+
+1. Keep your private config/config.yaml.
+2. Copy this release over the existing CDQAI 2.0.0 project folder.
+3. Close open output CSV and dashboard files.
+4. Run tests:
+   .\.venv\Scripts\python.exe -m pytest
+5. Run CDQAI:
+   .\Run_CDQAI_2.0.bat
+
+Expected automated test result: 12 passed.
+
+This release expands documentation and dashboard transparency. It does not yet resolve the empty annual_findings.csv issue; that remains a Version 2.0.1 milestone item under active development.

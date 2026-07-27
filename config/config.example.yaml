@@ -1,0 +1,118 @@
+project:
+  name: "Crash Data Quality Artificial Intelligence"
+  short_name: "CDQAI"
+  version: "2.0.2"
+  milestone: "Annual Reporting Reliability"
+
+paths:
+  cache_dir: "cache"
+  logs_dir: "logs"
+  outputs_dir: "outputs"
+  rules_dir: "rules"
+
+runtime:
+  environment: "development"
+  log_level: "INFO"
+
+database:
+  driver: "ODBC Driver 17 for SQL Server"
+  server: "YOUR_SQL_SERVER"
+  trusted_connection: true
+
+tables:
+  crash_table: "YourDatabase.dbo.YourCrashRoadwayTable"
+  narrative_table: "YourDatabase.dbo.YourNarrativeTable"
+
+fields:
+  crash_mfn_field: "MasterFile"
+  normalized_mfn_field: "MFN"
+  narrative_text_field: "NarrativeTxt"
+
+cache:
+  use_cache: true
+  write_cache: true
+  merged_dataset_file: "merged_crash_dataset.parquet"
+  narrative_embeddings_file: "narrative_embeddings.npy"
+  narrative_embedding_index_file: "narrative_embedding_index.json"
+
+outputs:
+  sample_rows: 1000
+  summary_file: "dataset_summary.csv"
+  sample_file: "merged_sample.csv"
+  manifest_file: "run_manifest.json"
+  model_scores_file: "model_scores.csv"
+  top_model_anomalies_file: "top_model_anomalies.csv"
+  top_model_anomalies_rows: 1000
+  evidence_file: "evidence.csv"
+  evidence_summary_file: "evidence_summary.csv"
+  findings_file: "findings.csv"
+  findings_summary_file: "findings_summary.csv"
+  actionable_findings_file: "actionable_findings.csv"
+  top_findings_file: "top_findings.csv"
+  top_findings_rows: 100
+  annual_findings_file: "annual_findings.csv"
+  dashboard_file: "dashboard.html"
+  dashboard_summary_file: "dashboard_summary.csv"
+
+models:
+  structured:
+    enabled: true
+    contamination: 0.02
+    random_state: 42
+    max_numeric_columns: 80
+
+  narrative:
+    enabled: true
+    embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+    batch_size: 256
+    contamination: 0.02
+    random_state: 42
+
+  ensemble:
+    structured_weight: 0.5
+    narrative_weight: 0.5
+
+model_evidence:
+  structured_percentile: 99.0
+  narrative_percentile: 99.0
+  ensemble_percentile: 99.5
+  high_percentile: 99.75
+  critical_percentile: 99.9
+  multi_model_minimum: 2
+
+rules:
+  enabled: true
+
+  missing_narrative:
+    enabled: true
+
+  sparse_narrative:
+    enabled: true
+    minimum_length: 40
+
+  required_fields:
+    enabled: true
+    rec01:
+      - "MFN"
+
+  injury_conflict:
+    enabled: true
+    injury_field_candidates:
+      - "InjurySeverity"
+      - "Injury_Severity"
+      - "Injury"
+      - "Severity"
+      - "KABCO"
+      - "INJ_SEV"
+      - "INJURY_SEVERITY"
+      - "MostSevereInjury"
+    no_injury_values:
+      - "no injury"
+      - "none"
+      - "not injured"
+      - "property damage only"
+      - "pdo"
+      - "0"
+      - "00"
+      - "n"
+      - "no"

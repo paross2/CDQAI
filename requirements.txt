@@ -1,0 +1,9 @@
+PyYAML>=6.0
+pandas>=2.0
+numpy>=1.24
+SQLAlchemy>=2.0
+pyodbc>=5.0
+tqdm>=4.66
+pyarrow>=14.0
+scikit-learn>=1.4
+sentence-transformers>=3.0

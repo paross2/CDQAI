@@ -1,0 +1,40 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Installation-specific configuration and secrets
+config/config.yaml
+.env
+.env.*
+
+# Runtime artifacts
+cache/*
+logs/*
+outputs/*
+!cache/.gitkeep
+!logs/.gitkeep
+!outputs/.gitkeep
+
+# Model/data artifacts
+*.parquet
+*.npy
+*.npz
+*.log
+
+# Distribution archives
+*.zip
+*.tar.gz
