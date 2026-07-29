@@ -9,8 +9,8 @@ from pathlib import Path
 
 PROJECT_NAME = "Crash Data Quality Artificial Intelligence"
 SHORT_NAME = "CDQAI"
-VERSION = "2.1.1"
-RELEASE_NAME = "Build Metadata & Provenance"
+VERSION = "2.1.2"
+RELEASE_NAME = "Collapsible Dashboard & Findings Explorer"
 
 LEAD_DEVELOPER = "Paul Ross"
 LEAD_TITLE = "Research Scientist Principal"
