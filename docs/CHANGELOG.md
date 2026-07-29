@@ -1,5 +1,14 @@
 # CDQAI Changelog
 
+## 2.1.2 — Collapsible Dashboard & Findings Explorer
+
+- Added collapsible accordion sections for How CDQAI Works, About CDQAI, Top Actionable Findings, and All Findings.
+- Added a complete findings explorer with text search, Primary Issue, Evidence Strength, Analyst Priority, and confidence-range filters.
+- Added ascending and descending sorting for findings columns and a live visible-findings count.
+- Standardized the project directory and launcher/document names to `CDQAI`, `Run_CDQAI.bat`, and `INSTALL.txt`.
+- No analytical models, evidence rules, or scoring behavior changed.
+
+
 ## 2.1.1 — Build Metadata & Provenance
 
 - Added centralized build metadata and runtime provenance.

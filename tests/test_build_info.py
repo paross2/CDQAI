@@ -3,8 +3,8 @@ from pathlib import Path
 from cdqai.core import build_info
 
 def test_release_metadata():
-    assert build_info.VERSION == "2.1.1"
-    assert build_info.RELEASE_NAME == "Build Metadata & Provenance"
+    assert build_info.VERSION == "2.1.2"
+    assert build_info.RELEASE_NAME == "Collapsible Dashboard & Findings Explorer"
     assert build_info.LEAD_DEVELOPER == "Paul Ross"
     assert build_info.CONTRIBUTING_DEVELOPER == "Nathaniel Swallom"
     assert "OpenAI ChatGPT" in build_info.AI_ATTRIBUTION
@@ -20,7 +20,7 @@ def test_current_release_files_do_not_use_stale_version():
     current_files = [
         root / "README.md", root / "GIT_SETUP.md", root / "VERSION", root / "pyproject.toml",
         root / "config/config.yaml", root / "config/config.example.yaml", root / "cdqai/main.py",
-        root / "Run_CDQAI_2.1.1.bat", root / "INSTALL_VERSION_2.1.1.txt"
+        root / "Run_CDQAI.bat", root / "INSTALL.txt"
     ]
     for path in current_files:
         text = path.read_text(encoding="utf-8")
