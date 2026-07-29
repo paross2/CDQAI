@@ -7,6 +7,7 @@ from datetime import datetime
 import pandas as pd
 
 from cdqai.core.config import CDQAIConfig
+from cdqai.core.build_info import (AI_ATTRIBUTION, CONTRIBUTING_DEVELOPER, CONTRIBUTOR_TITLE, DISCLAIMER, DOCUMENTATION_LICENSE, FUNDING_ACKNOWLEDGMENT, INSTITUTION, LEAD_DEVELOPER, LEAD_TITLE, ORGANIZATION, RELEASE_NAME, SOFTWARE_LICENSE, collect_build_info)
 from cdqai.data.dataset import CrashDataset
 from cdqai.evidence.engine import EvidenceCollection
 from cdqai.findings.finding import Finding
@@ -17,6 +18,37 @@ def _table(df: pd.DataFrame) -> str:
         return '<p class="empty">No records in this section.</p>'
     return df.to_html(index=False, border=0, classes="data", escape=True)
 
+
+
+
+def _findings_table(df: pd.DataFrame) -> str:
+    if df.empty:
+        return '<p class="empty">No records in this section.</p>'
+    rows = []
+    for index, row in df.iterrows():
+        detail_id = f"finding-detail-{index}"
+        priority = html.escape(str(row.get("PriorityLevel", "")))
+        confidence = float(row.get("ConfidenceScore", 0) or 0)
+        count = int(row.get("EvidenceCount", 0) or 0)
+        summary = (
+            f'<tr class="finding-summary"><td><button class="expand-button" type="button" aria-expanded="false" aria-controls="{detail_id}">+</button></td>'
+            f'<td>{html.escape(str(row.get("MFN", "")))}</td><td>{html.escape(str(row.get("PrimaryIssue", "")))}</td>'
+            f'<td><span class="priority priority-{priority.lower()}">{priority}</span></td>'
+            f'<td data-sort-value="{confidence:.1f}">{confidence:.1f}</td><td>{html.escape(str(row.get("EvidenceStrength", "")))}</td>'
+            f'<td data-sort-value="{count}">{count}</td><td>{html.escape(str(row.get("AnalystPriority", "")))}</td></tr>'
+        )
+        details = (
+            f'<tr id="{detail_id}" class="finding-detail" hidden><td colspan="8"><div class="detail-grid">'
+            f'<div><h4>Evidence agreement</h4><p>{html.escape(str(row.get("EvidenceAgreement", "")))}</p></div>'
+            f'<div><h4>Recommended action</h4><p>{html.escape(str(row.get("RecommendedAction", "")))}</p></div>'
+            f'<div><h4>Issue categories</h4><p>{html.escape(str(row.get("IssueCategories", "")))}</p></div>'
+            f'<div><h4>Quality characteristics</h4><p>{html.escape(str(row.get("QualityCharacteristics", "")))}</p></div>'
+            f'<div class="detail-wide"><h4>Explanation</h4><p>{html.escape(str(row.get("Explanation", "")))}</p></div>'
+            f'<div class="detail-wide"><h4>Evidence sources</h4><p>{html.escape(str(row.get("RuleIDs", "")))}</p></div>'
+            '</div></td></tr>'
+        )
+        rows.append(summary + details)
+    return '<div class="table-container"><table class="data findings-table sortable"><thead><tr><th></th><th>MFN</th><th>Primary Issue</th><th>Priority</th><th>Confidence</th><th>Evidence Strength</th><th>Signals</th><th>Analyst Priority</th></tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div>'
 
 def _pct(value: float) -> str:
     return f"{float(value):g}"
@@ -129,14 +161,18 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
     top = pd.DataFrame([x.to_dict() for x in actionable[:50]])
     generated = datetime.now().strftime("%B %d, %Y %I:%M %p")
     explanation = build_how_cdqai_works_html(config)
+    build = collect_build_info(config.project_root)
+    packages = "".join(f"<li><code>{html.escape(name)}</code> {html.escape(version)}</li>" for name, version in build["packages"].items())
+    provenance = f'''<section id="about-cdqai"><h2>About CDQAI</h2><div class="detail-grid"><div><h3>Project</h3><p><strong>{html.escape(config.project_name)} ({html.escape(config.short_name)})</strong><br>Version {html.escape(config.version)}<br>{html.escape(RELEASE_NAME)}</p></div><div><h3>Development</h3><p><strong>Lead Developer:</strong> {html.escape(LEAD_DEVELOPER)}, {html.escape(LEAD_TITLE)}<br><strong>Contributing Developer:</strong> {html.escape(CONTRIBUTING_DEVELOPER)}, {html.escape(CONTRIBUTOR_TITLE)}<br>{html.escape(ORGANIZATION)}<br>{html.escape(INSTITUTION)}</p></div><div><h3>Runtime</h3><p>Python {html.escape(str(build["python"]))}<br>{html.escape(str(build["operating_system"]))}<br>Git branch: {html.escape(str(build["git_branch"]))}<br>Git commit: {html.escape(str(build["git_commit"]))}<br>Git tag: {html.escape(str(build["git_tag"]))}</p></div><div><h3>Core Libraries</h3><ul>{packages}</ul></div><div class="detail-wide"><h3>AI-Assisted Development</h3><p>{html.escape(AI_ATTRIBUTION)}</p></div><div class="detail-wide"><h3>Funding</h3><p>{html.escape(FUNDING_ACKNOWLEDGMENT)}</p></div><div><h3>Licensing</h3><p>Software: {html.escape(SOFTWARE_LICENSE)}<br>Documentation: {html.escape(DOCUMENTATION_LICENSE)}</p></div><div class="detail-wide"><h3>Disclaimer</h3><p>{html.escape(DISCLAIMER)}</p></div></div></section>'''
     document = f'''<!doctype html><html><head><meta charset="utf-8"><title>CDQAI {config.version}</title>
-<style>body{{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a;line-height:1.5}}header{{background:#17365d;color:white;padding:32px 6%}}main{{max-width:1400px;margin:auto;padding:28px}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}}.card,section{{background:white;border-radius:8px;padding:20px;box-shadow:0 1px 5px #ccd2d8}}.card strong{{display:block;font-size:30px}}.card span{{color:#4d5966}}section{{margin-top:22px}}section h3{{margin-top:28px;color:#17365d}}table.data{{border-collapse:collapse;width:100%;font-size:13px}}.data th,.data td{{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}}.data th{{background:#e9eef4}}.note{{border-left:5px solid #17365d;padding:12px;background:#eef4fa}}.formula{{border-left:4px solid #66788a;background:#f6f8fa;padding:10px 12px}}footer{{padding:30px 6%;background:#17365d;color:white;margin-top:30px}}code{{background:#eef1f4;padding:2px 5px}}</style></head><body>
+<style>*{{box-sizing:border-box}}html,body{{max-width:100%;overflow-x:hidden}}body{{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a;line-height:1.5}}header{{background:#17365d;color:white;padding:clamp(24px,4vw,48px) 4vw}}main{{width:94%;max-width:1800px;margin:auto;padding:clamp(16px,2.5vw,36px) 0}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:14px}}.card,section{{min-width:0;background:white;border-radius:10px;padding:clamp(16px,2vw,24px);box-shadow:0 1px 5px #ccd2d8}}.card strong{{display:block;font-size:30px}}.card span{{color:#4d5966}}section{{margin-top:22px}}section h3{{margin-top:28px;color:#17365d}}.table-container{{width:100%;max-width:100%;overflow-x:auto;border:1px solid #d8dee5;border-radius:8px}}table.data{{border-collapse:collapse;width:100%;font-size:13px}}.data th,.data td{{border-bottom:1px solid #ddd;padding:9px;text-align:left;vertical-align:top;overflow-wrap:anywhere}}.data th{{background:#e9eef4;position:sticky;top:0;z-index:2;white-space:nowrap;cursor:pointer}}.findings-table{{min-width:980px}}.expand-button{{width:28px;height:28px;border:1px solid #7890aa;background:white;border-radius:5px;font-size:18px;cursor:pointer}}.finding-detail td{{background:#f5f8fb;padding:16px}}.detail-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}}.detail-wide{{grid-column:1/-1}}.detail-grid h4{{margin:0 0 4px;color:#17365d}}.detail-grid p{{margin:0}}.priority{{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:600}}.priority-critical{{background:#fde7e7;color:#8a1c1c}}.priority-high{{background:#fff0d9;color:#744600}}.priority-medium{{background:#e8f0fb;color:#244d7d}}.priority-low{{background:#edf1f4;color:#43515e}}.note{{border-left:5px solid #17365d;padding:12px;background:#eef4fa}}.formula{{border-left:4px solid #66788a;background:#f6f8fa;padding:10px 12px;overflow-wrap:anywhere}}footer{{padding:30px 4vw;background:#17365d;color:white;margin-top:30px}}code{{background:#eef1f4;padding:2px 5px}}@media(max-width:720px){{.detail-grid{{grid-template-columns:1fr}}.detail-wide{{grid-column:auto}}}}@media print{{.table-container{{overflow:visible}}.finding-detail[hidden]{{display:table-row}}}}</style></head><body>
 <header><h1>Crash Data Quality Artificial Intelligence (CDQAI)</h1><h2>Evidence and Review Dashboard — Version {html.escape(config.version)}</h2><p>CDQAI combines deterministic rules and machine-learning anomaly detection to prioritize Kentucky crash records for human review.</p></header>
 <main><div class="note"><strong>Interpretation:</strong> CDQAI reports observable evidence and statistical unusualness. A finding is not a determination that a record is wrong. Analysts must review the underlying record and applicable business rules.</div>
 <section><h2>About This Run</h2><div class="cards">{cards}</div></section>
 {explanation}
-<section><h2>Top Actionable Findings</h2>{_table(top)}</section>
+{provenance}
+<section><h2>Top Actionable Findings</h2><p>Expand a row for evidence agreement, recommended action, explanation, and sources.</p>{_findings_table(top)}</section>
 <section><h2>Important Limitations</h2><p>Crash data alone cannot fully measure accessibility, timeliness, or integration across systems. Model percentiles describe relative unusualness within the analyzed dataset, not probability of error. Missing and sparse narratives are reported as completeness evidence and are excluded from the actionable queue unless another signal exists.</p></section></main>
-<footer><strong>Crash Data Quality Artificial Intelligence (CDQAI)</strong><br>Version {html.escape(config.version)} · Kentucky Transportation Center · University of Kentucky<br>Generated: {generated}</footer></body></html>'''
+<footer><strong>Crash Data Quality Artificial Intelligence (CDQAI)</strong><br>Version {html.escape(config.version)} · Kentucky Transportation Center · University of Kentucky<br>Generated: {generated}</footer><script>for(const b of document.querySelectorAll('.expand-button')){{b.addEventListener('click',()=>{{const r=document.getElementById(b.getAttribute('aria-controls'));const o=r.hidden;r.hidden=!o;b.textContent=o?'−':'+';b.setAttribute('aria-expanded',String(o));}});}}for(const t of document.querySelectorAll('table.sortable')){{[...t.querySelectorAll('thead th')].forEach((h,i)=>{{if(!i)return;h.addEventListener('click',()=>{{const body=t.tBodies[0],g=[];for(const r of [...body.rows])if(r.classList.contains('finding-summary'))g.push([r,r.nextElementSibling]);const a=h.dataset.direction!=='asc';t.querySelectorAll('th').forEach(x=>delete x.dataset.direction);h.dataset.direction=a?'asc':'desc';g.sort((x,y)=>{{const A=x[0].cells[i],B=y[0].cells[i],av=A.dataset.sortValue??A.textContent.trim(),bv=B.dataset.sortValue??B.textContent.trim(),an=Number(av),bn=Number(bv);const z=!Number.isNaN(an)&&!Number.isNaN(bn)?an-bn:av.localeCompare(bv,undefined,{{numeric:true}});return a?z:-z;}});for(const q of g)for(const r of q)body.appendChild(r);}});}});}}</script></body></html>'''
     path.write_text(document, encoding="utf-8")
     logger.info("Dashboard written: %s", path)

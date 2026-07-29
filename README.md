@@ -1,6 +1,6 @@
 # CDQAI — Crash Data Quality Artificial Intelligence
 
-**Version 2.0.2 — Annual Reporting Reliability**
+**Version 2.1.1 — Build Metadata & Provenance**
 
 CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
 
@@ -62,7 +62,7 @@ A Multi-Model Anomaly is generated when at least two qualifying structured, narr
 
 ### 6. Synthesize findings by MFN
 
-CDQAI groups all rule and model evidence by MFN. Version 2.0.2 uses a deterministic Finding Engine; it does not use Llama or another large language model.
+CDQAI groups all rule and model evidence by MFN. Version 2.1.1 uses a deterministic Finding Engine; it does not use Llama or another large language model.
 
 A finding containing only missing- or sparse-narrative evidence is treated as completeness information and excluded from the actionable queue unless another signal exists.
 
@@ -98,12 +98,12 @@ Explanations are assembled from existing evidence messages. Duplicate messages a
 
 CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
 
-## Run Version 2.0.2 on Windows
+## Run Version 2.1.1 on Windows
 
 Close any open output CSV files, then double-click:
 
 ```text
-Run_CDQAI_2.0.2.bat
+Run_CDQAI_2.1.1.bat
 ```
 
 Or run:
@@ -139,4 +139,13 @@ Or run:
 
 Model percentiles measure relative unusualness within the analyzed dataset; they are not probabilities of error. Crash data alone cannot fully measure accessibility, timeliness, or cross-system integration. Those characteristics require operational or external-system information beyond the crash record itself.
 
-See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.0.2.md` for additional detail.
+See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.1.1.md` for additional detail.
+
+
+## Authorship, Funding, and Licensing
+
+CDQAI was conceived and led by **Paul Ross**, Research Scientist Principal, Kentucky Transportation Center, with contributions from **Nathaniel Swallom**, Research Scientist, Kentucky Transportation Center. Development was assisted by **OpenAI ChatGPT** as an engineering and documentation aid.
+
+Development was supported through **Federal Traffic Safety Information Systems (Section 405(c))** grant funding administered by the **Kentucky Office of Highway Safety (KOHS)** under the **Kentucky Transportation Cabinet (KYTC)**.
+
+Source code is licensed under the **MIT License**. Documentation is licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**. See `AUTHORS.md`, `LICENSE`, `LICENSE-DOCS`, and `CITATION.cff`.
