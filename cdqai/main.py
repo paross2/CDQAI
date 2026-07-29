@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--load-data", action="store_true", help="Load, merge, summarize, and cache crash/narrative data.")
     parser.add_argument("--run-models", action="store_true", help="Run structured and narrative model scoring.")
     parser.add_argument("--run-rules", action="store_true", help="Run the Kentucky deterministic rule engine.")
-    parser.add_argument("--run-all", action="store_true", help="Run the unified Version 2.0.2 evidence, finding, and dashboard pipeline.")
+    parser.add_argument("--run-all", action="store_true", help="Run the unified Version 2.1.1 evidence, finding, and dashboard pipeline.")
     parser.add_argument("--refresh-cache", action="store_true", help="Ignore existing cache and rebuild SQL/embedding caches.")
     return parser
 

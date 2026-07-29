@@ -1,3 +1,13 @@
+# CDQAI Changelog
+
+## 2.1.1 — Build Metadata & Provenance
+
+- Added centralized build metadata and runtime provenance.
+- Added developer, contributor, AI-assistance, and funding attribution.
+- Added MIT software license and CC BY 4.0 documentation license.
+- Added citation metadata and dashboard About/Provenance content.
+- Corrected stale current-release version references and filenames.
+
 # Changelog
 
 ## 2.0.2 — Annual Reporting Reliability
@@ -75,3 +85,10 @@
 - Added actionable, top-finding, annual, dashboard, and summary reports.
 - Added Windows launcher and Version 2.0 documentation.
 - Clarified that CDQAI reports evidence rather than conclusions.
+
+## 2.1.0 — Responsive Analyst Decision Support
+
+- Replaced the wide dashboard findings table with a compact, expandable analyst queue.
+- Added responsive viewport-based layout, horizontal table containment, sticky headers, wrapping, print rules, and client-side sorting.
+- Added deterministic `ConfidenceScore`, `EvidenceAgreement`, `EvidenceStrength`, `AnalystPriority`, and `RecommendedAction` fields to finding exports.
+- Preserved the existing priority score and evidence synthesis logic for backward compatibility.

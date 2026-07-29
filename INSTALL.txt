@@ -1,0 +1,10 @@
+CDQAI VERSION 2.1.1 INSTALLATION
+
+1. Install Python 3.11 or later.
+2. Open PowerShell in this folder.
+3. Create a virtual environment: python -m venv .venv
+4. Activate it: .\.venv\Scripts\Activate.ps1
+5. Install dependencies: python -m pip install -r requirements.txt
+6. Copy config\config.example.yaml to config\config.yaml and review settings.
+7. Run tests: python -m pytest
+8. Launch with Run_CDQAI_2.1.1.bat or python run_cdqai.py --run-all.
