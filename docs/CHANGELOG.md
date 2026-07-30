@@ -1,5 +1,20 @@
 # CDQAI Changelog
 
+## 2.2.3 — Lightweight On-Demand Narrative Evidence
+
+- Moved complete narrative payloads out of `dashboard.html` into `dashboard_narratives.js`.
+- Added on-demand rendering when a finding row is expanded.
+- Added persisted `finding_evidence.parquet` with full narratives and structured evidence spans.
+- Added explicit missing-narrative warnings and analyst spot-check instructions.
+- Preserved direct rule phrase highlighting without false token attribution for embedding-only anomalies.
+
+
+## 2.2.2 — Transparent Narrative Evidence
+
+- Added narratives and rule-grounded phrase highlighting to expanded dashboard findings.
+- Added Git, Windows 11, GPU, AI-stack, model, and system provenance reporting.
+- Added explicit attribution limitations for embedding-only narrative anomalies.
+
 ## 2.1.2 — Collapsible Dashboard & Findings Explorer
 
 - Added collapsible accordion sections for How CDQAI Works, About CDQAI, Top Actionable Findings, and All Findings.

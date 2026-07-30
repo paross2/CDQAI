@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import importlib.metadata
+import os
 import platform
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 PROJECT_NAME = "Crash Data Quality Artificial Intelligence"
 SHORT_NAME = "CDQAI"
-VERSION = "2.1.2"
-RELEASE_NAME = "Collapsible Dashboard & Findings Explorer"
+VERSION = "2.2.4"
+RELEASE_NAME = "Transparent Narrative Evidence"
+REPOSITORY_URL = "https://github.com/paross2/CDQAI"
+DEFAULT_BRANCH = "main"
+DEFAULT_TAG = "v2.2.4"
 
 LEAD_DEVELOPER = "Paul Ross"
 LEAD_TITLE = "Research Scientist Principal"
@@ -44,8 +48,10 @@ DISCLAIMER = (
 
 CORE_PACKAGES = (
     "PyYAML", "pandas", "numpy", "SQLAlchemy", "pyodbc", "tqdm", "pyarrow",
-    "scikit-learn", "sentence-transformers",
+    "scikit-learn", "sentence-transformers", "transformers", "huggingface-hub",
+    "torch", "tokenizers",
 )
+
 
 def package_versions(packages: tuple[str, ...] = CORE_PACKAGES) -> dict[str, str]:
     versions: dict[str, str] = {}
@@ -56,16 +62,78 @@ def package_versions(packages: tuple[str, ...] = CORE_PACKAGES) -> dict[str, str
             versions[name] = "not installed"
     return versions
 
-def _git_value(project_root: Path, *args: str) -> str:
-    try:
-        return subprocess.check_output(
-            ["git", *args], cwd=project_root, stderr=subprocess.DEVNULL, text=True, timeout=2
-        ).strip() or "unknown"
-    except (OSError, subprocess.SubprocessError):
-        return "unknown"
 
-def collect_build_info(project_root: Path) -> dict[str, object]:
+def _git_value(project_root: Path, *args: str) -> str | None:
+    try:
+        value = subprocess.check_output(
+            ["git", *args], cwd=project_root, stderr=subprocess.DEVNULL, text=True, timeout=3
+        ).strip()
+        return value or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _git_metadata(project_root: Path) -> dict[str, str]:
+    branch = _git_value(project_root, "rev-parse", "--abbrev-ref", "HEAD")
+    commit = _git_value(project_root, "rev-parse", "--short=12", "HEAD")
+    tag = _git_value(project_root, "describe", "--tags", "--exact-match")
+    dirty = _git_value(project_root, "status", "--porcelain")
     return {
+        "git_branch": branch or os.getenv("CDQAI_GIT_BRANCH", DEFAULT_BRANCH),
+        "git_commit": commit or os.getenv("CDQAI_GIT_COMMIT", "source archive; commit unavailable"),
+        "git_tag": tag or os.getenv("CDQAI_GIT_TAG", DEFAULT_TAG),
+        "git_dirty": "yes" if dirty else "no" if branch else "not available",
+        "repository": REPOSITORY_URL,
+    }
+
+
+def _windows_details() -> dict[str, str]:
+    release = platform.release()
+    version = platform.version()
+    result = {
+        "operating_system": platform.platform(),
+        "os_name": platform.system() or "Unknown",
+        "os_edition": "",
+        "os_version": release,
+        "os_build": version.split(".")[-1] if version else "",
+    }
+    if platform.system() != "Windows":
+        return result
+    try:
+        import winreg  # type: ignore
+        key_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            product = str(winreg.QueryValueEx(key, "ProductName")[0])
+            display = str(winreg.QueryValueEx(key, "DisplayVersion")[0])
+            build = str(winreg.QueryValueEx(key, "CurrentBuildNumber")[0])
+            ubr = str(winreg.QueryValueEx(key, "UBR")[0])
+        # Some Windows 11 installations retain a Windows 10 ProductName compatibility value.
+        if int(build) >= 22000 and "Windows 10" in product:
+            product = product.replace("Windows 10", "Windows 11")
+        result.update({
+            "operating_system": f"{product} {display} (Build {build}.{ubr})",
+            "os_name": "Windows 11" if int(build) >= 22000 else "Windows 10",
+            "os_edition": product,
+            "os_version": display,
+            "os_build": f"{build}.{ubr}",
+        })
+    except (OSError, ValueError):
+        pass
+    return result
+
+
+def _gpu_info() -> str:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return "; ".join(torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count()))
+        return "No CUDA GPU detected"
+    except (ImportError, RuntimeError):
+        return "Unavailable"
+
+
+def collect_build_info(project_root: Path) -> dict[str, Any]:
+    info: dict[str, Any] = {
         "project": PROJECT_NAME,
         "short_name": SHORT_NAME,
         "version": VERSION,
@@ -73,10 +141,10 @@ def collect_build_info(project_root: Path) -> dict[str, object]:
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "python": platform.python_version(),
         "python_implementation": platform.python_implementation(),
-        "operating_system": platform.platform(),
         "architecture": platform.machine(),
-        "git_branch": _git_value(project_root, "rev-parse", "--abbrev-ref", "HEAD"),
-        "git_commit": _git_value(project_root, "rev-parse", "--short", "HEAD"),
-        "git_tag": _git_value(project_root, "describe", "--tags", "--exact-match"),
+        "gpu": _gpu_info(),
         "packages": package_versions(),
     }
+    info.update(_windows_details())
+    info.update(_git_metadata(project_root))
+    return info

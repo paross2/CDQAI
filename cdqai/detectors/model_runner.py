@@ -11,7 +11,7 @@ def run_model_scoring(dataset: CrashDataset, config: CDQAIConfig, logger: loggin
     results=pd.DataFrame({mfn: merged[mfn].astype(str).to_numpy()}); metadata={}
     structured_cfg=config.raw.get("models",{}).get("structured",{}); narrative_cfg=config.raw.get("models",{}).get("narrative",{}); ensemble_cfg=config.raw.get("models",{}).get("ensemble",{})
     if structured_cfg.get("enabled", True):
-        results=results.merge(StructuredAnomalyDetector(config, logger).score(merged), on=mfn, how="left"); metadata["structured_enabled"]=True
+        detector=StructuredAnomalyDetector(config, logger); results=results.merge(detector.score(merged), on=mfn, how="left"); metadata["structured_enabled"]=True; metadata["structured_fields_used"]=detector.feature_columns; metadata["structured_fields_excluded"]=detector.excluded_columns
     else: results["StructuredScore_pct"]=0.0; metadata["structured_enabled"]=False
     if narrative_cfg.get("enabled", True):
         results=results.merge(NarrativeAnomalyDetector(config, logger).score(merged, refresh_cache), on=mfn, how="left"); metadata["narrative_enabled"]=True
@@ -20,5 +20,5 @@ def run_model_scoring(dataset: CrashDataset, config: CDQAIConfig, logger: loggin
     if total <= 0: raise ValueError("Ensemble weights must sum to a positive value.")
     results["ModelEnsembleScore"]=(sw*results["StructuredScore_pct"].fillna(0)+nw*results["NarrativeScore_pct"].fillna(0))/total
     results["ModelConfidence"]=results["ModelEnsembleScore"].rank(pct=True)*100.0
-    metadata.update({"structured_weight": sw, "narrative_weight": nw, "records_scored": len(results)})
+    metadata.update({"structured_weight": sw, "narrative_weight": nw, "records_scored": len(results), "context": dataset.context_summary})
     return results, metadata

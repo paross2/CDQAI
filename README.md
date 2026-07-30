@@ -1,523 +1,160 @@
-![Release](https://img.shields.io/badge/Release-v2.1.2-blue)
+# CDQAI — Crash Data Quality Artificial Intelligence
 
-![Python](https://img.shields.io/badge/Python-3.11-blue)
+**Version 2.2.3 — Transparent Narrative Evidence**
 
-![License](https://img.shields.io/badge/License-MIT-green)
+CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
 
-![Tests](https://img.shields.io/badge/Tests-17_Passing-brightgreen)
+> CDQAI reports evidence, not conclusions. A finding indicates that a record is incomplete, internally inconsistent, or statistically unusual. It does not establish that the record is incorrect.
 
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+## How CDQAI Works
 
-![Status](https://img.shields.io/badge/Status-Active-success)
+### 1. Load and validate
 
-# CDQAI
-## Crash Data Quality Artificial Intelligence
+CDQAI loads the configured crash-record and narrative tables from SQL Server. Crash identifiers are normalized into a common Master File Number (MFN), narrative text is normalized, required source fields are validated, and the sources are merged by MFN. The merged dataset supports both deterministic rules and machine-learning models.
 
-> **Explainable Artificial Intelligence for Improving Motor Vehicle Crash Data Quality**
+### 2. Apply deterministic rules
 
----
+Deterministic rules are explicit, human-readable checks. They do not depend on statistical similarity or learned patterns.
 
-## Overview
+- **Missing narrative:** the narrative is null, blank, or whitespace only.
+- **Sparse narrative:** a nonblank narrative is shorter than the configured minimum. The default is 40 characters.
+- **Missing required field:** a field listed under `rules.required_fields` is null or blank. The default example requires MFN.
+- **Narrative injury conflict:** injury-, EMS-, hospital-, fatality-, or death-related language is compared with available coded injury fields. Evidence is created when the narrative contains an injury signal and a configured coded field contains a configured no-injury value.
 
-**Crash Data Quality Artificial Intelligence (CDQAI)** is an explainable artificial intelligence platform developed by the Kentucky Transportation Center to help transportation 
-agencies identify, prioritize, and investigate potential data quality issues in large motor vehicle crash databases. By combining deterministic rules, machine learning, and 
-natural language processing, CDQAI provides transparent, evidence-based decision support that keeps human analysts in control.
+A rule identifies an observable condition or possible inconsistency. It does not determine which value is correct.
 
-Rather than replacing analysts, CDQAI helps prioritize records that warrant review by combining:
+### 3. Score structured crash variables
 
-- Deterministic data quality rules
-- Machine learning anomaly detection
-- Natural language processing of crash narratives
-- Explainable evidence generation
-- Analyst-oriented prioritization
+The structured model uses an Isolation Forest to evaluate unusual combinations of numeric coded crash variables. MFN is excluded; infinite values are converted to missing; missing numeric values are filled with zero; and fields are robustly scaled. The default configuration uses no more than 80 numeric fields.
 
-The goal is to improve the **accuracy, completeness, consistency, and reliability** of crash data while reducing the manual effort required for quality assurance.
+Isolation Forest repeatedly partitions the data. Records isolated in fewer partitions are considered more unusual. CDQAI negates the model decision function so larger values represent greater unusualness, then converts scores to percentile ranks in `StructuredScore_pct`.
 
-Every analytical finding includes supporting evidence, confidence estimates, and a human-readable explanation so analysts can understand why the system flagged a record.
+The default contamination value is 0.02, meaning the model is fitted while expecting an approximate 2% outlier fraction. Contamination guides model fitting; it is not the final evidence threshold.
 
-CDQAI is intended for transportation agencies, traffic records personnel, highway safety offices, researchers, and other professionals responsible for maintaining and 
-analyzing crash databases.
+### 4. Score crash narratives
 
----
+Narratives are converted into semantic embeddings using `sentence-transformers/all-MiniLM-L6-v2`. The embeddings represent overall meaning, allowing narratives with similar concepts to be near one another even when they use different words.
 
-## Dashboard Preview
+An Isolation Forest evaluates these embeddings. A narrative can score highly because it describes a rare event, combines unusual concepts, uses atypical language or structure, or is otherwise distant from common narrative patterns. The model does not rely on a fixed suspicious-word list. Scores are percentile-ranked in `NarrativeScore_pct`.
 
-![Dashboard](docs/images/dashboard.png)
+### 5. Convert model scores into evidence
 
----
+The default ensemble calculation is:
 
-## Quick Start
+```text
+ModelEnsembleScore =
+    (0.5 × StructuredScore_pct)
+    +
+    (0.5 × NarrativeScore_pct)
+```
 
-```bash
-git clone https://github.com/paross2/CDQAI.git
+The ensemble results are ranked again to produce `ModelConfidence`. Scores become formal evidence only after exceeding configured thresholds:
 
-cd CDQAI
+| Evidence or severity | Default threshold | Interpretation |
+|---|---:|---|
+| Structured Anomaly | 99.0th percentile | Approximately the most unusual 1% of structured records |
+| Narrative Anomaly | 99.0th percentile | Approximately the most unusual 1% of narratives |
+| Ensemble Anomaly | 99.5th percentile | Approximately the most unusual 0.5% after combining both models |
+| High severity | 99.75th percentile | Approximately the most unusual 0.25% |
+| Critical severity | 99.9th percentile | Approximately the most unusual 0.1% |
 
-py -3.11 -m venv .venv
+A Multi-Model Anomaly is generated when at least two qualifying structured, narrative, or ensemble signals flag the same MFN. Thresholds and weights are configurable in `config/config.yaml`. The dashboard reads and displays the active values used for the run.
 
-.\.venv\Scripts\Activate.ps1
+### 6. Synthesize findings by MFN
 
-pip install -e .
+CDQAI groups all rule and model evidence by MFN. Version 2.2.3 uses a deterministic Finding Engine; it does not use Llama or another large language model.
 
+A finding containing only missing- or sparse-narrative evidence is treated as completeness information and excluded from the actionable queue unless another signal exists.
+
+The Finding Engine:
+
+1. assigns a finding type;
+2. selects the highest-severity and highest-confidence primary issue;
+3. calculates a priority score; and
+4. combines the evidence messages into a transparent analyst explanation.
+
+The priority formula is:
+
+```text
+Priority score =
+    2 × highest severity
+    + 2 × highest confidence
+    + source-diversity adjustment
+    + multi-source bonus
+```
+
+The source-diversity adjustment adds 0.75 for each additional distinct source, up to three additions. A 2-point bonus is added when at least two distinct sources agree.
+
+| Priority | Score |
+|---|---:|
+| Critical | 13 or higher |
+| High | 10 to less than 13 |
+| Medium | 7 to less than 10 |
+| Low | Less than 7 |
+
+Explanations are assembled from existing evidence messages. Duplicate messages are removed. No generative model creates new evidence or determines ground truth.
+
+### 7. Produce reports
+
+CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
+
+## Run Version 2.2.3 on Windows
+
+Close any open output CSV files, then double-click:
+
+```text
 Run_CDQAI.bat
 ```
 
----
-
-## Why CDQAI?
-
-Crash databases often contain hundreds of thousands of records each year. Traditional quality assurance methods typically rely on manual review, making it difficult to identify subtle inconsistencies or unusual records.
-
-CDQAI provides an intelligent first-pass review that helps analysts focus on the records most likely to contain errors.
-
-Examples include:
-
-- Injury severity inconsistent with narrative text
-- Missing or contradictory crash characteristics
-- Unusual combinations of roadway, vehicle, and driver attributes
-- Suspicious structured data patterns
-- Low-quality or incomplete narratives
-
----
-
-# Guiding Philosophy
-
-## **AI assists analysts.**
-
-CDQAI does **not** automatically change crash records.
-
-Instead, it provides:
-
-- evidence
-- confidence
-- explanations
-- prioritization
-
-allowing trained analysts to make the final determination.
-
-Every finding should be:
-
-- Explainable
-- Reproducible
-- Transparent
-- Defensible
-
----
-
-# AI Architecture
-
-                Structured Crash Data
-                         │
-                         ▼
-              Isolation Forest Detector
-                         │
-                         ├──────────────┐
-                         │              │
-                         ▼              │
-                 Narrative Processing   │
-                         │              │
-                         ▼              │
-               Sentence Embeddings      │
-                         │              │
-                         └──────┬───────┘
-                                ▼
-                    Deterministic Rules
-                                │
-                                ▼
-                     Finding Synthesis
-                                │
-                                ▼
-                    Analyst Decision Support
-                                │
-                                ▼
-                   Interactive HTML Dashboard
-
----
-# Current Capabilities
-
-| Capability | Status |
-|------------|:------:|
-| Structured anomaly detection | ✅ |
-| Narrative analysis | ✅ |
-| Deterministic rules | ✅ |
-| Explainable findings | ✅ |
-| Interactive dashboard | ✅ |
-| Analyst prioritization | ✅ |
-| Build metadata | ✅ |
-| Automated tests | ✅ |
-
----
-# Key Features
-
-## Explainable AI
-
-Every finding includes:
-
-- Primary Issue
-- Confidence
-- Evidence Strength
-- Analyst Priority
-- Supporting Evidence
-- Human-readable explanation
-
----
-
-## Hybrid Detection
-
-CDQAI combines multiple analytical techniques:
-
-- Deterministic validation rules
-- Structured anomaly detection
-- Narrative text analysis
-- Ensemble scoring
-
----
-
-## Interactive Dashboard
-
-The HTML dashboard provides:
-
-### Executive Summary
-
-Quick overview of analysis results.
-
-### Top Actionable Findings
-
-Prioritized findings requiring analyst attention.
-
-### All Findings Explorer
-
-Interactive exploration including:
-
-- Search
-- Primary Issue filter
-- Confidence filtering
-- Evidence Strength filtering
-- Analyst Priority filtering
-- Sortable columns
-- Expandable evidence
-
-### Documentation
-
-Collapsible sections describing:
-
-- How CDQAI Works
-- About CDQAI
-
-### Build Metadata
-
-Displays:
-
-- Version
-- Release
-- Developers
-- Runtime
-- Python version
-- Installed package versions
-- Funding acknowledgement
-- Licensing
-- AI attribution
-
----
-
-# Repository Structure
-
-```text
-CDQAI/
-│
-├── cdqai/
-│   ├── core/
-│   ├── data/
-│   ├── detectors/
-│   ├── findings/
-│   ├── reports/
-│   ├── models/
-│   ├── utils/
-│   └── main.py
-│
-├── config/
-│
-├── docs/
-│
-├── tests/
-│
-├── AUTHORS.md
-├── CHANGELOG.md
-├── CITATION.cff
-├── INSTALL.txt
-├── LICENSE
-├── LICENSE-DOCS
-├── README.md
-├── Run_CDQAI.bat
-└── VERSION
-```
-
----
-## Technology Stack
-
-- Python 3.11
-- pandas
-- scikit-learn
-- sentence-transformers
-- PyTorch
-- NumPy
-- HTML/CSS/JavaScript
-- pytest
----
-
-# Installation
-
-## Requirements
-
-Recommended:
-
-- Python 3.11
-- Windows 10 or Windows 11
-
-Clone the repository:
-
-```bash
-git clone https://github.com/paross2/CDQAI.git
-```
-
-Create a virtual environment:
-
-```bash
-py -3.11 -m venv .venv
-```
-
-Activate it:
+Or run:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\python.exe run_cdqai.py --run-all
 ```
 
-Install dependencies:
 
-```bash
-pip install -e .
-```
+## Repository Layout
 
----
+- `cdqai/` — application source code
+- `config/` — local and example configuration
+- `tests/` — automated tests
+- `docs/` — architecture, methodology, and release documentation
+- `outputs/`, `cache/`, and `logs/` — generated runtime artifacts kept outside the application package
 
-# Running CDQAI
+`config/config.yaml` is intentionally ignored by Git because it may contain installation-specific database settings. Start from `config/config.example.yaml` when configuring a new installation.
 
-Run using:
+## Primary Outputs
 
-```text
-Run_CDQAI.bat
-```
+- `outputs/dashboard.html` — management and analyst dashboard
+- `outputs/dashboard_summary.csv` — run-level evidence counts
+- `outputs/evidence.csv` — all deterministic and model evidence
+- `outputs/findings.csv` — all synthesized findings
+- `outputs/actionable_findings.csv` — findings requiring substantive review
+- `outputs/top_findings.csv` — highest-priority analyst queue
+- `outputs/annual_findings.csv` — annual actionable-evidence trends
+- `outputs/model_scores.csv` — record-level model scores
 
-or
+## Interpretation and Limitations
 
-```bash
-python -m cdqai.main
-```
+Model percentiles measure relative unusualness within the analyzed dataset; they are not probabilities of error. Crash data alone cannot fully measure accessibility, timeliness, or cross-system integration. Those characteristics require operational or external-system information beyond the crash record itself.
 
----
+See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.1.2.md` for additional detail.
 
-# Testing
 
-Run the complete automated test suite:
+## Authorship, Funding, and Licensing
 
-```bash
-python -m pytest
-```
+CDQAI was conceived and led by **Paul Ross**, Research Scientist Principal, Kentucky Transportation Center, with contributions from **Nathaniel Swallom**, Research Scientist, Kentucky Transportation Center. Development was assisted by **OpenAI ChatGPT** as an engineering and documentation aid.
 
-All tests should pass before submitting code changes.
+Development was supported through **Federal Traffic Safety Information Systems (Section 405(c))** grant funding administered by the **Kentucky Office of Highway Safety (KOHS)** under the **Kentucky Transportation Cabinet (KYTC)**.
 
----
+Source code is licensed under the **MIT License**. Documentation is licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**. See `AUTHORS.md`, `LICENSE`, `LICENSE-DOCS`, and `CITATION.cff`.
 
-# Development Workflow
+## Context-Aware Analysis
 
-CDQAI follows a two-branch workflow.
+Version 2.2.3 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
 
-```
-develop
-    │
-    │ Development
-    ▼
-Testing
-    │
-    ▼
-Merge
-    │
-    ▼
-main
-    │
-    ▼
-Git Tag
-```
+Add the newest official KYTC workbook to `context/kentucky_dvmt/raw/` each year. CDQAI reports the context year used, fallback type, year gap, source file, and freshness status rather than failing when an exact year is unavailable. The generated `analysis_field_manifest.csv` identifies fields used, retained, or excluded.
 
-### Branches
+## Dashboard narrative companion files (Version 2.2.3)
 
-**develop**
-
-Active development.
-
-**main**
-
-Stable releases only.
-
-### Releases
-
-Each release is identified using an annotated Git tag.
-
-Examples:
-
-```markdown
-Examples:
-
-```text
-v2.1.1
-v2.1.2
-v2.2.0
-
-The repository directory remains named:
-
-```
-CDQAI
-```
-
-Version numbers are maintained through:
-
-- VERSION
-- Build metadata
-- Git tags
-
-rather than folder names.
-
----
-
-# Software Engineering Principles
-
-CDQAI emphasizes:
-
-- Explainability
-- Transparency
-- Reproducibility
-- Testability
-- Maintainability
-- Professional software engineering
-
-Technical debt is minimized whenever practical, and obsolete prototype components are removed as the project matures.
-
----
-
-# Citation
-
-If CDQAI contributes to published work, please cite:
-
-> Ross, P. Crash Data Quality Artificial Intelligence (CDQAI). Kentucky Transportation Center, University of Kentucky.
-
-See:
-
-```
-CITATION.cff
-```
-
-for machine-readable citation metadata.
-
----
-
-# Funding
-
-Development of the Crash Data Quality Artificial Intelligence (CDQAI) software has been supported through **Federal Traffic Safety Information Systems (Section 405(c))** grant funding administered by the **Kentucky Office of Highway Safety (KOHS)** under the **Kentucky Transportation Cabinet (KYTC).**
-
----
-
-# Disclaimer
-
-The findings, conclusions, software, and recommendations presented herein are those of the authors and do not necessarily represent the official views or policies of:
-
-- Kentucky Transportation Center
-- University of Kentucky
-- Kentucky Office of Highway Safety
-- Kentucky Transportation Cabinet
-- United States Department of Transportation
-
----
-
-# Authors
-
-## Lead Developer
-
-**Paul Ross**
-
-Research Scientist Principal
-
-Kentucky Transportation Center
-
-University of Kentucky
-
----
-
-## Contributing Developer
-
-**Nathaniel Swallom**
-
-Research Scientist
-
-Kentucky Transportation Center
-
-University of Kentucky
-
-Contributions include:
-
-- Technical research
-- Methodology evaluation
-- Analytical review
-- Software testing and feedback
-
----
-
-# AI Engineering Assistance
-
-Development of CDQAI was assisted by **OpenAI ChatGPT**.
-
-Human review, software architecture, algorithm selection, validation, testing, and final implementation remain under the direction and responsibility of the lead developer.
-
----
-
-# License
-
-Software
-
-**MIT License**
-
-Documentation
-
-**Creative Commons Attribution 4.0 International (CC BY 4.0)**
-
----
-
-# Future Development
-
-### Version 2.1
-
-- Dashboard modernization
-- Build metadata
-- Explainability improvements
-- Interactive findings explorer
-
-### Version 2.2
-
-- Enhanced analytical methods
-- Additional finding categories
-- Improved visualization
-- Performance optimization
-
-### Version 3.0
-
-- Desktop analytics platform
-- Multi-agency support
-- Expanded reporting
-- Enterprise deployment options
-
----
-
-# Project Status
-
-CDQAI is an actively developed research software platform focused on improving transportation safety data quality through transparent and explainable artificial intelligence.
-
-Contributions, suggestions, and collaboration are welcome.
+The dashboard now loads complete narratives on demand. Keep `dashboard.html` and `dashboard_narratives.js` together in the same output directory. When an analyst expands a finding with the `+` button, the dashboard reads that MFN's complete narrative from the companion JavaScript file and renders direct rule evidence with yellow highlighting. `finding_evidence.parquet` provides a durable analyst-ready copy of the full narrative and structured evidence spans; a CSV fallback is produced when Parquet support is unavailable.

@@ -13,6 +13,7 @@ from cdqai.data.database import DatabaseManager
 from cdqai.data.preprocessing import build_dataset, build_dataset_from_merged_cache
 from cdqai.reports.dataset_report import write_dataset_outputs
 from cdqai.reports.evidence_report import write_evidence_outputs
+from cdqai.reports.field_manifest import write_field_manifest
 from cdqai.rules.engine import RuleEngine
 
 
@@ -25,7 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--load-data", action="store_true", help="Load, merge, summarize, and cache crash/narrative data.")
     parser.add_argument("--run-models", action="store_true", help="Run structured and narrative model scoring.")
     parser.add_argument("--run-rules", action="store_true", help="Run the Kentucky deterministic rule engine.")
-    parser.add_argument("--run-all", action="store_true", help="Run the unified Version 2.1.2 evidence, finding, and dashboard pipeline.")
+    parser.add_argument("--run-all", action="store_true", help="Run the unified Version 2.2.3 lightweight narrative evidence context-aware evidence, finding, and dashboard pipeline.")
     parser.add_argument("--refresh-cache", action="store_true", help="Ignore existing cache and rebuild SQL/embedding caches.")
     return parser
 
@@ -50,7 +51,6 @@ def run_health_check() -> int:
     logger.info("Cache directory: %s", config.cache_dir)
     logger.info("Logs directory: %s", config.logs_dir)
     logger.info("Outputs directory: %s", config.outputs_dir)
-    logger.info("Rules directory: %s", config.rules_dir)
     logger.info("CDQAI health check completed successfully.")
     return 0
 
@@ -98,6 +98,7 @@ def run_data_pipeline(refresh_cache: bool = False) -> int:
 
         with timed_step(logger, "Writing dataset outputs"):
             write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
 
         elapsed = time.perf_counter() - start
         manifest_path = write_run_manifest(config, elapsed, dataset.metadata)
@@ -126,6 +127,7 @@ def run_models(refresh_cache: bool = False) -> int:
 
         with timed_step(logger, "Writing dataset outputs"):
             write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
 
         with timed_step(logger, "Running model scoring"):
             scores, model_metadata = run_model_scoring(
@@ -161,6 +163,7 @@ def run_rules(refresh_cache: bool = False) -> int:
 
         with timed_step(logger, "Writing dataset outputs"):
             write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
 
         with timed_step(logger, "Running Kentucky Rule Engine"):
             evidence = RuleEngine(config=config, logger=logger).run(dataset)
@@ -206,6 +209,7 @@ def run_all(refresh_cache: bool = False) -> int:
         dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
         with timed_step(logger, "Writing dataset outputs"):
             write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
         with timed_step(logger, "Running deterministic rules"):
             rule_evidence = RuleEngine(config=config, logger=logger).run(dataset)
         with timed_step(logger, "Running model scoring"):

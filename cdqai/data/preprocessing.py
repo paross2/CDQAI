@@ -7,6 +7,7 @@ import pandas as pd
 
 from cdqai.core.config import CDQAIConfig
 from cdqai.data.dataset import CrashDataset, DatasetMetadata
+from cdqai.context.dvmt import DVMTContextManager
 
 
 def normalize_mfn(df: pd.DataFrame, mfn_col: str) -> pd.DataFrame:
@@ -41,6 +42,8 @@ def build_dataset(
     if len(merged) == 0:
         raise RuntimeError("No records after merge. Check MFN alignment.")
 
+    merged, context_summary = DVMTContextManager(config, logger).enrich(merged)
+
     metadata = build_metadata(
         merged=merged,
         config=config,
@@ -57,6 +60,7 @@ def build_dataset(
         narratives=narratives_filtered,
         merged=merged,
         metadata=metadata,
+        context_summary=context_summary.to_dict(),
     )
 
 
@@ -77,6 +81,11 @@ def build_dataset_from_merged_cache(
         raise KeyError(f"Cached merged dataset is missing MFN field: {mfn}")
 
     merged = normalize_mfn(merged, mfn)
+    # Reattach context so annual source updates can take effect without rebuilding SQL caches.
+    context_columns = [c for c in merged.columns if c.startswith("Context")]
+    if context_columns:
+        merged = merged.drop(columns=context_columns)
+    merged, context_summary = DVMTContextManager(config, logger).enrich(merged)
 
     metadata = build_metadata(
         merged=merged,
@@ -94,6 +103,7 @@ def build_dataset_from_merged_cache(
         narratives=pd.DataFrame(),
         merged=merged,
         metadata=metadata,
+        context_summary=context_summary.to_dict(),
     )
 
 

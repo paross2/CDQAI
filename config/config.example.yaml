@@ -1,14 +1,13 @@
 project:
   name: "Crash Data Quality Artificial Intelligence"
   short_name: "CDQAI"
-  version: "2.1.2"
-  milestone: "Annual Reporting Reliability"
+  version: "2.2.4"
+  milestone: "Transparent Narrative Evidence"
 
 paths:
   cache_dir: "cache"
   logs_dir: "logs"
   outputs_dir: "outputs"
-  rules_dir: "rules"
 
 runtime:
   environment: "development"
@@ -53,13 +52,22 @@ outputs:
   annual_findings_file: "annual_findings.csv"
   dashboard_file: "dashboard.html"
   dashboard_summary_file: "dashboard_summary.csv"
+  dashboard_narratives_file: "dashboard_narratives.js"
+  finding_evidence_file: "finding_evidence.parquet"
 
 models:
   structured:
     enabled: true
     contamination: 0.02
     random_state: 42
-    max_numeric_columns: 80
+    # Optional reviewed allow-list. Leave empty to use all safe numeric fields.
+    include_fields: []
+    exclude_fields: []
+    exclude_prefixes: ["Context"]
+    county_fields: ["CountyNumber", "County_Number", "CountyNo", "COUNTY", "CNTY", "CountyCode"]
+    geographic_fields: ["Latitude", "Longitude", "Lat", "Lon", "Long", "GPSLatitude", "GPSLongitude", "XCoordinate", "YCoordinate", "Easting", "Northing"]
+    hhmm_time_fields: ["CrashTime", "CollisionTime", "AccidentTime", "TimeOfDay", "HHMM"]
+    identifier_fields: ["MFN", "MasterFile", "MasterFileNumber", "RecordID", "RowID", "SourceID"]
 
   narrative:
     enabled: true
@@ -116,3 +124,14 @@ rules:
       - "00"
       - "n"
       - "no"
+
+context:
+  kentucky_dvmt:
+    enabled: true
+    directory: "context/kentucky_dvmt/raw"
+    normalized_cache_file: "kentucky_county_dvmt.parquet"
+    allow_future_fallback: true
+    maximum_year_gap: 3
+    fields:
+      year_candidates: ["CrashYear", "YR", "Year", "Crash_Year"]
+      county_candidates: ["CountyNumber", "County_Number", "CountyNo", "COUNTY", "CNTY"]

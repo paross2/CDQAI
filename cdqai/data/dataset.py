@@ -20,3 +20,4 @@ class CrashDataset:
     narratives: pd.DataFrame
     merged: pd.DataFrame
     metadata: DatasetMetadata
+    context_summary: dict | None = None

@@ -1,6 +1,6 @@
 [project]
 name = "cdqai"
-version = "2.1.2"
+version = "2.2.4"
 description = "Crash Data Quality Artificial Intelligence"
 requires-python = ">=3.11"
 

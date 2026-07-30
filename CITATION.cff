@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use CDQAI in published work, please cite this software."
 title: "Crash Data Quality Artificial Intelligence (CDQAI)"
-version: 2.1.2
-date-released: 2026-07-28
+version: 2.2.4
+date-released: 2026-07-29
 authors:
   - family-names: Ross
     given-names: Paul

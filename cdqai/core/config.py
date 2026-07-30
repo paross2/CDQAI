@@ -22,7 +22,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "cache_dir": "cache",
         "logs_dir": "logs",
         "outputs_dir": "outputs",
-        "rules_dir": "rules",
     },
     "runtime": {
         "environment": "development",
@@ -53,13 +52,34 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "annual_findings_file": "annual_findings.csv",
         "dashboard_file": "dashboard.html",
         "dashboard_summary_file": "dashboard_summary.csv",
+        "dashboard_narratives_file": "dashboard_narratives.js",
+        "finding_evidence_file": "finding_evidence.parquet",
+    },
+    "context": {
+        "kentucky_dvmt": {
+            "enabled": True,
+            "directory": "context/kentucky_dvmt/raw",
+            "normalized_cache_file": "kentucky_county_dvmt.parquet",
+            "allow_future_fallback": True,
+            "maximum_year_gap": 3,
+            "fields": {
+                "year_candidates": ["CrashYear", "YR", "Year", "Crash_Year"],
+                "county_candidates": ["CountyNumber", "County_Number", "CountyNo", "COUNTY", "CNTY"],
+            },
+        }
     },
     "models": {
         "structured": {
             "enabled": True,
             "contamination": 0.02,
             "random_state": 42,
-            "max_numeric_columns": 80,
+            "include_fields": [],
+            "exclude_fields": [],
+            "exclude_prefixes": ["Context"],
+            "county_fields": ["CountyNumber", "County_Number", "CountyNo", "COUNTY", "CNTY", "CountyCode"],
+            "geographic_fields": ["Latitude", "Longitude", "Lat", "Lon", "Long", "GPSLatitude", "GPSLongitude", "XCoordinate", "YCoordinate", "Easting", "Northing"],
+            "hhmm_time_fields": ["CrashTime", "CollisionTime", "AccidentTime", "TimeOfDay", "HHMM"],
+            "identifier_fields": ["MFN", "MasterFile", "MasterFileNumber", "RecordID", "RowID", "SourceID"],
         },
         "narrative": {
             "enabled": True,
@@ -178,10 +198,6 @@ class CDQAIConfig:
         return self.project_root / self.raw["paths"]["outputs_dir"]
 
     @property
-    def rules_dir(self) -> Path:
-        return self.project_root / self.raw["paths"]["rules_dir"]
-
-    @property
     def log_level(self) -> str:
         return self.raw["runtime"].get("log_level", "INFO")
 
@@ -241,7 +257,6 @@ def load_config(config_path: str | Path = "config/config.yaml") -> CDQAIConfig:
         config.cache_dir,
         config.logs_dir,
         config.outputs_dir,
-        config.rules_dir,
     ):
         folder.mkdir(parents=True, exist_ok=True)
 
