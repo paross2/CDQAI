@@ -1,5 +1,12 @@
 # CDQAI Changelog
 
+## 2.2.5 - Local Setup and Synthetic Validation (2026-09-23)
+
+- Added a fabricated-data smoke run, development dependencies, and beginner setup instructions.
+- Deferred narrative imports when disabled and removed a test dependency on private configuration.
+- Updated release metadata and documented safe local operation and publication.
+- Production analytical behavior is unchanged. See [release notes](RELEASE_NOTES_2.2.5.md) and the [root changelog](../CHANGELOG.md).
+
 ## 2.2.3 — Lightweight On-Demand Narrative Evidence
 
 - Moved complete narrative payloads out of `dashboard.html` into `dashboard_narratives.js`.

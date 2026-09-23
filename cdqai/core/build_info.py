@@ -10,11 +10,11 @@ from typing import Any
 
 PROJECT_NAME = "Crash Data Quality Artificial Intelligence"
 SHORT_NAME = "CDQAI"
-VERSION = "2.2.4"
-RELEASE_NAME = "Transparent Narrative Evidence"
+VERSION = "2.2.5"
+RELEASE_NAME = "Local Setup and Synthetic Validation"
 REPOSITORY_URL = "https://github.com/paross2/CDQAI"
 DEFAULT_BRANCH = "main"
-DEFAULT_TAG = "v2.2.4"
+DEFAULT_TAG = "v2.2.5"
 
 LEAD_DEVELOPER = "Paul Ross"
 LEAD_TITLE = "Research Scientist Principal"

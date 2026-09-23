@@ -3,7 +3,6 @@ import logging
 import pandas as pd
 from cdqai.core.config import CDQAIConfig
 from cdqai.data.dataset import CrashDataset
-from cdqai.detectors.narrative import NarrativeAnomalyDetector
 from cdqai.detectors.structured import StructuredAnomalyDetector
 
 def run_model_scoring(dataset: CrashDataset, config: CDQAIConfig, logger: logging.Logger, refresh_cache: bool=False) -> tuple[pd.DataFrame, dict]:
@@ -14,6 +13,8 @@ def run_model_scoring(dataset: CrashDataset, config: CDQAIConfig, logger: loggin
         detector=StructuredAnomalyDetector(config, logger); results=results.merge(detector.score(merged), on=mfn, how="left"); metadata["structured_enabled"]=True; metadata["structured_fields_used"]=detector.feature_columns; metadata["structured_fields_excluded"]=detector.excluded_columns
     else: results["StructuredScore_pct"]=0.0; metadata["structured_enabled"]=False
     if narrative_cfg.get("enabled", True):
+        from cdqai.detectors.narrative import NarrativeAnomalyDetector
+
         results=results.merge(NarrativeAnomalyDetector(config, logger).score(merged, refresh_cache), on=mfn, how="left"); metadata["narrative_enabled"]=True
     else: results["NarrativeScore_pct"]=0.0; metadata["narrative_enabled"]=False
     sw=float(ensemble_cfg.get("structured_weight",0.5)); nw=float(ensemble_cfg.get("narrative_weight",0.5)); total=sw+nw

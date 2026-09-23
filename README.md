@@ -1,6 +1,6 @@
 # CDQAI — Crash Data Quality Artificial Intelligence
 
-**Version 2.2.3 — Transparent Narrative Evidence**
+**Version 2.2.5 — Local Setup and Synthetic Validation**
 
 CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
 
@@ -25,11 +25,11 @@ A rule identifies an observable condition or possible inconsistency. It does not
 
 ### 3. Score structured crash variables
 
-The structured model uses an Isolation Forest to evaluate unusual combinations of numeric coded crash variables. MFN is excluded; infinite values are converted to missing; missing numeric values are filled with zero; and fields are robustly scaled. The default configuration uses no more than 80 numeric fields.
+The structured model uses an Isolation Forest to evaluate unusual combinations of numeric coded crash variables. Identifiers, geographic coordinates, county codes, raw HHMM times, and context/provenance fields are excluded by the field-role policy. Infinite values are converted to missing and missing numeric values are filled with the median. Constant fields are excluded; there is no schema-order feature limit or first-N scoring-row truncation.
 
 Isolation Forest repeatedly partitions the data. Records isolated in fewer partitions are considered more unusual. CDQAI negates the model decision function so larger values represent greater unusualness, then converts scores to percentile ranks in `StructuredScore_pct`.
 
-The default contamination value is 0.02, meaning the model is fitted while expecting an approximate 2% outlier fraction. Contamination guides model fitting; it is not the final evidence threshold.
+The default contamination value is 0.02, meaning the model is fitted while expecting an approximate 2% outlier fraction. Contamination sets the model decision threshold; it is not the final evidence threshold.
 
 ### 4. Score crash narratives
 
@@ -62,7 +62,7 @@ A Multi-Model Anomaly is generated when at least two qualifying structured, narr
 
 ### 6. Synthesize findings by MFN
 
-CDQAI groups all rule and model evidence by MFN. Version 2.2.3 uses a deterministic Finding Engine; it does not use Llama or another large language model.
+CDQAI groups all rule and model evidence by MFN. Version 2.2.5 uses a deterministic Finding Engine; it does not use Llama or another large language model.
 
 A finding containing only missing- or sparse-narrative evidence is treated as completeness information and excluded from the actionable queue unless another signal exists.
 
@@ -98,7 +98,7 @@ Explanations are assembled from existing evidence messages. Duplicate messages a
 
 CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
 
-## Run Version 2.2.3 on Windows
+## Run Version 2.2.5 on Windows
 
 Close any open output CSV files, then double-click:
 
@@ -151,10 +151,14 @@ Source code is licensed under the **MIT License**. Documentation is licensed und
 
 ## Context-Aware Analysis
 
-Version 2.2.3 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
+Version 2.2.5 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
 
 Add the newest official KYTC workbook to `context/kentucky_dvmt/raw/` each year. CDQAI reports the context year used, fallback type, year gap, source file, and freshness status rather than failing when an exact year is unavailable. The generated `analysis_field_manifest.csv` identifies fields used, retained, or excluded.
 
-## Dashboard narrative companion files (Version 2.2.3)
+## Dashboard narrative companion files (Version 2.2.5)
 
 The dashboard now loads complete narratives on demand. Keep `dashboard.html` and `dashboard_narratives.js` together in the same output directory. When an analyst expands a finding with the `+` button, the dashboard reads that MFN's complete narrative from the companion JavaScript file and renders direct rule evidence with yellow highlighting. `finding_evidence.parquet` provides a durable analyst-ready copy of the full narrative and structured evidence spans; a CSV fallback is produced when Parquet support is unavailable.
+
+## Local development
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for Python 3.11, VS Code, private configuration, tests, and the isolated synthetic run: `python -m cdqai.main --smoke-test`. See [docs/DEVELOPMENT_REVIEW.md](docs/DEVELOPMENT_REVIEW.md) for the current implementation review and next priorities.

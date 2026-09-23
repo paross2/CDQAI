@@ -1,0 +1,240 @@
+HOW TO RUN CDQAI
+Crash Data Quality AI - Windows user guide
+Prepared for version 2.2.5
+
+WHAT THIS TOOL DOES
+
+CDQAI checks crash records for missing information, possible contradictions,
+and unusual patterns. It creates a dashboard and a ranked list for an analyst
+to review. A high score is a reason to investigate, not proof of an error.
+
+You do not need to know Python to use an installation that is already set up.
+The normal starting point is the file named Run_CDQAI.bat.
+
+IMPORTANT: KEEP PROTECTED DATA PRIVATE
+
+Server-sourced data and local crash inputs are protected. Run CDQAI only on an
+approved computer with authorized access and approved storage. Generated reports,
+dashboards, narrative companion files, caches, and logs must also stay protected.
+
+Do not upload these materials to OpenAI, other AI services, GitHub, public websites,
+or unapproved services. Do not paste real records, narratives, identifiers,
+connection settings, logs, or screenshots containing protected information into
+an AI chat. Review real-data results locally yourself. An AI assistant should
+work only with application code, sanitized documentation, and fabricated examples.
+
+This guide does not grant permission to access or share crash data. Follow your
+organization's data-access and handling requirements.
+
+
+1. FIND THE CORRECT PROJECT FOLDER
+
+Open the working CDQAI folder in Windows File Explorer. Use the installation
+provided by the project owner, not a different download or GitHub clone.
+
+The folder should contain:
+  Run_CDQAI.bat       The normal launcher
+  .venv              The project's Python environment
+  config             Configuration files
+  cdqai              Application code
+  outputs            Generated reports
+  logs               Run logs
+
+The private configuration is config\config.yaml. It tells the program where to
+find the approved data and where to save results. Preserve an existing working
+configuration. Do not replace it with the example configuration.
+
+If .venv or config\config.yaml is missing, see section 6 before a real-data run.
+
+
+2. OPTIONAL: TRY A PRACTICE RUN FIRST
+
+The practice run uses 128 fabricated records. It does not read the private
+configuration, query a crash database, or read existing crash-data caches.
+It does not download or run the narrative embedding model.
+
+To open PowerShell in the project folder:
+  a. Open the CDQAI folder in File Explorer.
+  b. Click the address bar at the top of the window.
+  c. Type powershell and press Enter.
+
+In the PowerShell window, copy the following command and press Enter:
+
+  .\.venv\Scripts\python.exe -m cdqai.main --smoke-test
+
+Wait for the completion message. Then open this file in File Explorer:
+
+  outputs\smoke\dashboard.html
+
+This is a practice dashboard, not real findings. Its companion file,
+dashboard_narratives.js, must remain in the same folder.
+
+Practice results stay in outputs\smoke and do not replace the normal reports.
+A successful practice run checks basic processing and reporting, but does not
+prove that database access or the full narrative model is ready.
+
+
+3. RUN CDQAI WITH THE APPROVED LOCAL CONFIGURATION
+
+Before starting:
+  - Confirm that you are authorized to use the configured data.
+  - Have the project owner confirm the configuration and model files are ready.
+  - If the run needs SQL Server, use the approved network/VPN and Windows account.
+  - Close CDQAI output CSV files in Excel so they can be updated.
+  - Keep an approved local copy of previous results if you need to retain them.
+    A new run can replace files with the same names in the output folder.
+
+Double-click Run_CDQAI.bat in the CDQAI folder.
+
+A command window will open and show progress. Leave it open while the program
+runs. A full run can take substantial time; it may process the entire dataset.
+Do not start another run at the same time.
+
+The program normally reuses its existing merged-data and embedding caches when
+enabled. This means a normal run does not necessarily fetch the newest database
+records. Ask the project owner when data should be refreshed.
+
+When the launcher reports successful completion, press a key to close its window.
+If it reports failure, use section 7. Do not assume an existing dashboard belongs
+to the latest attempt; it may be left over from an earlier run.
+
+Alternative for users already working in PowerShell in the project folder:
+
+  .\.venv\Scripts\python.exe -m cdqai.main --run-all
+
+This command runs the same full pipeline as the batch launcher. It is not a
+small practice run.
+
+
+4. VIEW AND INTERPRET THE RESULTS
+
+With the default configuration, open:
+
+  outputs\dashboard.html
+
+If the project owner configured a different output folder, use that location.
+The dashboard opens in a web browser as a local file. Do not publish it online.
+Keep dashboard_narratives.js beside it; this companion contains narrative text.
+
+Start with the highest-priority findings. Expand a finding with its + button
+to inspect available narrative evidence. Compare the explanation and suggested
+follow-up with the authorized source record before deciding whether a correction
+is needed. An unusual record can still be accurate.
+
+Useful files in the same output folder include:
+  top_findings.csv          Highest-priority review queue
+  actionable_findings.csv   Findings requiring substantive analyst review
+  findings.csv              All synthesized findings
+  evidence.csv              Supporting rule and model evidence
+  annual_findings.csv       Annual findings summary
+  model_scores.csv          Record-level model scores
+
+CSV files can be opened in Excel for authorized local review. Close them before
+the next run. Keep analyst notes separately in an approved location because
+generated files may be overwritten. Do not upload reports or dashboard files.
+
+
+5. USING VS CODE (OPTIONAL)
+
+VS Code is useful for development but is not required for the batch launcher.
+
+  a. In VS Code, choose File > Open Folder and select the working CDQAI folder.
+  b. If needed, install the Microsoft Python extension through your approved
+     software-installation process.
+  c. Press Ctrl+Shift+P and choose Python: Select Interpreter.
+  d. Select .venv\Scripts\python.exe inside this CDQAI folder.
+  e. Choose Terminal > New Terminal. Use a PowerShell terminal at the project root.
+  f. Run the practice command from section 2, or the full-run command from section 3.
+
+You do not need to activate the environment when using the explicit Python
+executable path shown in this guide. For real-data runs, use a terminal you
+control directly; do not ask an AI assistant to run or capture the output.
+
+
+6. FIRST-TIME SETUP (PROJECT OWNER OR IT ASSISTANCE RECOMMENDED)
+
+Skip environment creation if the existing .venv works. Do not recreate a working
+installation merely to follow these steps.
+
+For a new installation, use Python 3.11. Open PowerShell in the CDQAI folder and
+run these commands one at a time:
+
+  py -3.11 -m venv .venv
+  .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+  .\.venv\Scripts\python.exe -m pip check
+
+Dependency installation may need internet access. Have IT arrange approved
+software and model downloads before running on protected inputs. The full
+narrative model may otherwise attempt a download when its files are absent.
+
+If config\config.yaml does not exist, copy config\config.example.yaml to that
+name. Have the project owner enter approved local settings. The example's
+database placeholders will not connect to a real database. Never overwrite
+an existing private config, and never copy private settings back into the example.
+
+SQL access also requires the configured Microsoft SQL Server ODBC driver and
+the appropriate network/account permissions. Ask IT if these are unavailable.
+
+Optional configuration check, run privately:
+
+  .\.venv\Scripts\python.exe -m cdqai.main --health-check
+
+This checks configuration loading and runtime directories. It does not test
+SQL connectivity or prove the embedding model is available.
+
+Run the fabricated practice test from section 2 before a full run.
+Developers can also run the automated test suite:
+
+  .\.venv\Scripts\python.exe -m pytest
+
+For more setup detail, see docs\DEVELOPMENT.md.
+
+
+7. COMMON PROBLEMS
+
+"Python virtual environment not found" or Python executable cannot be found:
+  Check that you opened the intended working CDQAI folder. If .venv is missing
+  or broken, ask the project owner or IT to complete section 6.
+
+PowerShell cannot find the command or file:
+  Confirm the terminal is in the folder containing Run_CDQAI.bat. Copy the full
+  command, including the initial .\ characters.
+
+"No module named ...":
+  A dependency is missing, or the wrong Python was selected. Use the explicit
+  .venv\Scripts\python.exe path. Have the project owner repair dependencies.
+
+SQL connection, login, driver, or table error:
+  Ask the project owner or IT to check the local configuration, ODBC driver,
+  account permissions, and network/VPN. Do not upload the error or configuration
+  to an AI service; it may contain protected connection or data details.
+
+Access denied while writing a report:
+  Close output files in Excel and other programs, then retry. If it continues,
+  ask IT to check write permissions and file locks in the approved output folder.
+
+Automated tests cannot use the Windows temporary folder:
+  A developer can choose a NEW, unused temporary directory under outputs with
+  pytest's --basetemp option. Do not point this option at an existing report or
+  data folder: pytest may clear the directory it is given.
+
+Narratives do not appear in the dashboard:
+  Check that dashboard_narratives.js is beside dashboard.html. Some records
+  genuinely have no narrative; the fabricated practice data includes that case.
+
+Results seem old:
+  Verify the last run completed successfully. Normal runs can reuse caches.
+  Ask the project owner about a controlled refresh. Do not add --refresh-cache
+  casually: it rebuilds caches and may start a lengthy database/model operation.
+
+The program stops or reports failure:
+  Review the newest file in logs locally with authorized project staff.
+  Do not upload logs, protected outputs, or screenshots to OpenAI or GitHub.
+  For external help, describe the symptom without actual data or private settings.
+
+
+FOR PROJECT MAINTAINERS
+
+Publish reviewed source code and sanitized documentation only. Keep the real
+config, inputs, caches, logs, and outputs private. See GIT_SETUP.md for the
+publication checks. This guide contains no real crash records or credentials.

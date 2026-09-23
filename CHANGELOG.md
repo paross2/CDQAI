@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.5 - Local Setup and Synthetic Validation (2026-09-23)
+
+- Added an isolated `--smoke-test` command using 128 fabricated records, structured scoring, deterministic rules, findings, and dashboard generation.
+- Deferred narrative-model imports until narrative scoring is enabled.
+- Added `requirements-dev.txt`, beginner instructions in `How To Run.txt`, and local development and publication guidance.
+- Removed the release test's dependency on ignored private configuration.
+- Corrected setup/version documentation and documented implementation priorities.
+- Production scoring weights, thresholds, and rules are unchanged. Protected data and local runtime artifacts are excluded from this release.
+
+See `docs/RELEASE_NOTES_2.2.5.md` for validation scope and upgrade instructions.
+
 ## 2.2.4 — Reliable Narrative MFN Matching
 
 - Canonicalizes MFNs before narrative joins, including integer, string, and `.0` forms.

@@ -1,8 +1,8 @@
 project:
   name: "Crash Data Quality Artificial Intelligence"
   short_name: "CDQAI"
-  version: "2.2.4"
-  milestone: "Transparent Narrative Evidence"
+  version: "2.2.5"
+  milestone: "Local Setup and Synthetic Validation"
 
 paths:
   cache_dir: "cache"

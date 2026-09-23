@@ -26,7 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--load-data", action="store_true", help="Load, merge, summarize, and cache crash/narrative data.")
     parser.add_argument("--run-models", action="store_true", help="Run structured and narrative model scoring.")
     parser.add_argument("--run-rules", action="store_true", help="Run the Kentucky deterministic rule engine.")
-    parser.add_argument("--run-all", action="store_true", help="Run the unified Version 2.2.3 lightweight narrative evidence context-aware evidence, finding, and dashboard pipeline.")
+    parser.add_argument("--run-all", action="store_true", help="Run the unified evidence, finding, and dashboard pipeline.")
+    parser.add_argument("--smoke-test", action="store_true", help="Run synthetic records through structured scoring, rules, and reports without SQL or embedding downloads.")
     parser.add_argument("--refresh-cache", action="store_true", help="Ignore existing cache and rebuild SQL/embedding caches.")
     return parser
 
@@ -192,7 +193,7 @@ def run_rules(refresh_cache: bool = False) -> int:
 
 
 
-def run_all(refresh_cache: bool = False) -> int:
+def run_all(refresh_cache: bool = False, *, config=None, dataset=None) -> int:
     from cdqai.detectors.model_runner import run_model_scoring
     from cdqai.evidence.engine import EvidenceCollection
     from cdqai.evidence.model_evidence import build_model_evidence
@@ -202,11 +203,12 @@ def run_all(refresh_cache: bool = False) -> int:
     from cdqai.reports.model_report import write_model_outputs
 
     start = time.perf_counter()
-    config = load_config()
+    config = config if config is not None else load_config()
     logger = setup_logger(config.logs_dir, config.log_level)
     log_banner(logger, config, "Unified evidence pipeline starting.")
     try:
-        dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
+        if dataset is None:
+            dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
         with timed_step(logger, "Writing dataset outputs"):
             write_dataset_outputs(dataset, config, logger)
             write_field_manifest(dataset, config, logger)
@@ -240,6 +242,12 @@ def run_all(refresh_cache: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.smoke_test:
+        if any((args.run_all, args.run_rules, args.run_models, args.load_data, args.refresh_cache, args.health_check)):
+            parser.error("--smoke-test must be used on its own")
+        from cdqai.smoke import run_smoke_test
+        return run_smoke_test()
 
     if args.run_all:
         return run_all(refresh_cache=args.refresh_cache)
