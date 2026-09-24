@@ -1,3 +1,4 @@
+<!-- CDQAI file version: 2.2.5 -->
 # CDQAI Architecture
 
 CDQAI is organized around stable architectural layers rather than temporary sprint folders.
@@ -32,16 +33,20 @@ Deterministic Kentucky data quality checks.
 
 ## Classifiers
 
-Transforms evidence into analyst-facing findings.
+The `findings/` package transforms evidence into analyst-facing findings. The
+separate `classifiers/` package is a reserved extension point.
 
 ## Explain
 
-Creates deterministic explanations from evidence.
+Deterministic explanations are currently assembled by the finding engine.
+The separate `explain/` package is a reserved extension point.
 
 ## LLM
 
-Optional local reviewer for analyst-friendly summaries. The LLM explains; it does not decide.
+Reserved for a possible future local reviewer. No LLM currently determines
+anomalies or generates the finding explanations.
 
 ## Reports
 
-Writes CSV, JSON, and future dashboard artifacts.
+Writes CSV/JSON reports, the HTML dashboard, its narrative companion file, and
+persisted narrative evidence. These are protected local runtime artifacts.

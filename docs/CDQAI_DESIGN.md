@@ -1,5 +1,17 @@
+<!-- CDQAI file version: 2.2.5 -->
 # CDQAI – Crash Data Quality Artificial Intelligence
 
-See the full system design document in this file. This document should describe the Kentucky-specific project scope, historical background, Section 405 context, data model, quality characteristics, guiding principles, architecture, validation strategy, and roadmap.
+This file is a design outline, not a completed specification. The current
+implementation combines deterministic rules, structured anomaly scoring,
+narrative embeddings, evidence collection, finding synthesis, and local reports.
+The Evidence object is the shared contract between analysis and reporting.
 
-Version 1.4.0 adds the Evidence Framework as the central abstraction for all future CDQAI findings.
+The intended scope is Kentucky crash/roadway (Rec01), vehicle (Rec02), and driver
+(Rec03) data. Current loaders support a crash table and a narrative table;
+separate Rec02/Rec03 validation remains future work. Findings are review leads,
+not proof of errors. Protected inputs and outputs must stay in approved environments.
+
+See TECHNICAL_ARCHITECTURE.md for the implemented pipeline, DEVELOPMENT_REVIEW.md
+for known limitations, and ROADMAP.md for the next work. A fuller specification
+of record relationships, validation criteria, and analyst evaluation remains to
+be written and reviewed with the project owner.

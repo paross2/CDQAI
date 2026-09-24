@@ -1,3 +1,4 @@
+CDQAI file version: 2.2.5
 CDQAI VERSION 2.2.5 INSTALLATION
 
 1. Install Python 3.11 or later.

@@ -1,3 +1,4 @@
+<!-- CDQAI file version: 2.2.5 -->
 # Local development
 
 Open the intended working checkout itself in VS Code. The code, configuration,
@@ -72,3 +73,7 @@ files within the approved environment before an offline production run.
 
 See [GIT_SETUP.md](../GIT_SETUP.md) before publishing changes and
 [DEVELOPMENT_REVIEW.md](DEVELOPMENT_REVIEW.md) for the implementation review.
+
+Before every Git update, run `.\.venv\Scripts\python.exe tools/release_version.py --check`.
+The release inventory controls which public text/code files receive the current
+version marker. Input workbooks and private runtime files are excluded.

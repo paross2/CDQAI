@@ -1,3 +1,4 @@
+<!-- CDQAI file version: 2.2.5 -->
 # CDQAI — Crash Data Quality Artificial Intelligence
 
 **Version 2.2.5 — Local Setup and Synthetic Validation**

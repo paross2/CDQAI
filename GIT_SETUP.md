@@ -1,4 +1,33 @@
+<!-- CDQAI file version: 2.2.5 -->
 # Publishing local CDQAI changes
+
+## Keep file versions synchronized
+
+`VERSION` is the release source of truth. Each maintained public text/code file
+in `release-files.txt` carries a matching `CDQAI file version` marker, including
+license distribution metadata and the runtime directories' `.gitkeep` placeholders.
+GitHub's message beside a file or folder is its most recent commit message, not
+the version of the whole application. Historical documents and input workbooks
+retain their original contents and may continue to show older last-change messages.
+
+Before every Git update, run:
+
+```powershell
+.\.venv\Scripts\python.exe tools/release_version.py --check
+```
+
+To synchronize markers for the existing version, run the same command without
+`--check`. To prepare a new release, use `--version X.Y.Z` with the chosen version,
+then update release notes and review all changes. This updates version markers,
+current metadata, and current-use version references without rewriting dependency
+versions, license terms, or historical release notes. Add new maintained source
+files explicitly to `release-files.txt`; private inputs never belong in that list.
+
+`Release_CDQAI.bat` reads `VERSION` and runs the check. It does not stage, commit,
+tag, upload, or process data. Version-specific release batch files are retired.
+Do not move an already-published release tag for a documentation cleanup.
+
+## Review and publish
 
 Develop in the working checkout that contains the private configuration and local
 runtime files. That checkout can publish source changes directly to GitHub; a second

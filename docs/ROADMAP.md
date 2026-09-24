@@ -1,55 +1,26 @@
+<!-- CDQAI file version: 2.2.5 -->
 # CDQAI Roadmap
 
-## Version 1.1.0 — Foundation
+## Current baseline
 
-Complete.
+The current application includes SQL/cache loading, deterministic Rec01 rules,
+structured and narrative models, evidence collection, finding synthesis, local
+reports, and an interactive dashboard. The synthetic smoke run and user guide
+support local setup. See VERSION for the current release.
 
-## Version 1.2.0 — Data Layer
+## Next work, after local analyst review
 
-Complete.
+1. Make MFN normalization and duplicate handling consistent across joins and reports.
+2. Validate embedding caches against narrative content and model identity.
+3. Correct derived-signal double counting in evidence strength and priority.
+4. Improve specific explanations, recommended actions, and crash-year fallback.
+5. Measure embedding runtime and memory at the intended dataset scale.
+6. Use analyst dispositions to evaluate thresholds and scoring weights.
 
-## Version 1.3.0 — Model Layer
+Separate Rec02/Rec03 relationships and validation remain part of the intended
+scope. Broader narrative fact extraction and any local LLM assistance require
+separate design and validation. No new feature version is assigned until its
+scope is agreed. Historical release notes preserve earlier milestone descriptions.
 
-In progress.
-
-## Version 1.4.0 — Evidence Framework
-
-Current milestone.
-
-- Kentucky record types
-- Traffic records systems
-- Quality characteristics
-- Evidence objects
-- Evidence bundles
-
-## Version 1.5.0 — Rule Engine
-
-Planned.
-
-- Narrative fact extraction
-- Initial deterministic Kentucky rules
-- Rule-generated evidence
-
-## Version 1.6.0 — Classification and Explanation
-
-Planned.
-
-- Classification engine
-- Deterministic explanations
-- Analyst-facing finding summaries
-
-## Version 1.7.0 — Analyst Reports
-
-Planned.
-
-- Evidence reports
-- Review-ready outputs
-- Dashboard prototype
-
-## Version 2.x — Distracted Driving Narrative Detector
-
-Future funded project.
-
-- Narrative-based distracted driving detector
-- Evidence integration
-- Analyst validation workflow
+See DEVELOPMENT_REVIEW.md for the evidence behind these priorities. Real-data
+runs and output review are performed privately by authorized users.

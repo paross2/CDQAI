@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 from pathlib import Path
 import logging
 import pandas as pd

@@ -1,4 +1,15 @@
+<!-- CDQAI file version: 2.2.5 -->
 # Changelog
+
+## Maintenance on main - release-file consistency
+
+- Added synchronized CDQAI file-version markers to maintained public text/code,
+  licenses, and empty runtime-directory placeholders.
+- Added a reviewed release inventory, an update/check command, and regression tests.
+- Replaced the stale version-named release script with `Release_CDQAI.bat`, which
+  reads `VERSION` and checks consistency without automatically staging or publishing.
+- Updated current guides and roadmap; preserved historical release records,
+  input workbooks, license terms, and the published v2.2.5 tag.
 
 ## 2.2.5 - Local Setup and Synthetic Validation (2026-09-23)
 

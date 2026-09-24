@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 from cdqai.reports.dashboard_report import _highlight_narrative
 
 

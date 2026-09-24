@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 from __future__ import annotations
 import logging
 from pathlib import Path

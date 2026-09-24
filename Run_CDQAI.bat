@@ -1,9 +1,11 @@
 @echo off
+REM CDQAI file version: 2.2.5
 setlocal
 cd /d "%~dp0"
+set /p CDQAI_VERSION=<VERSION
 echo ============================================================
 echo Crash Data Quality Artificial Intelligence ^(CDQAI^)
-echo Version 2.2.5 - Local Setup and Synthetic Validation
+echo Version %CDQAI_VERSION%
 echo ============================================================
 echo.
 if not exist ".venv\Scripts\python.exe" (
@@ -14,11 +16,11 @@ if not exist ".venv\Scripts\python.exe" (
 ".venv\Scripts\python.exe" run_cdqai.py --run-all
 if errorlevel 1 (
   echo.
-  echo CDQAI Version 2.2.5 failed. Review the newest log file.
+  echo CDQAI Version %CDQAI_VERSION% failed. Review the newest log file.
   pause
   exit /b 1
 )
 echo.
-echo CDQAI Version 2.2.5 completed successfully.
+echo CDQAI Version %CDQAI_VERSION% completed successfully.
 echo Dashboard: outputs\dashboard.html
 pause

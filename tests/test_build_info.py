@@ -1,9 +1,10 @@
+# CDQAI file version: 2.2.5
 from pathlib import Path
 
 from cdqai.core import build_info
 
 def test_release_metadata():
-    assert build_info.VERSION == "2.2.5"
+    assert build_info.VERSION == (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
     assert build_info.RELEASE_NAME == "Local Setup and Synthetic Validation"
     assert build_info.LEAD_DEVELOPER == "Paul Ross"
     assert build_info.CONTRIBUTING_DEVELOPER == "Nathaniel Swallom"

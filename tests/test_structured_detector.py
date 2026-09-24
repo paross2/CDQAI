@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 import logging
 from pathlib import Path
 

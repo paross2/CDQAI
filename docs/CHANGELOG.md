@@ -1,3 +1,4 @@
+<!-- CDQAI file version: 2.2.5 -->
 # CDQAI Changelog
 
 ## 2.2.5 - Local Setup and Synthetic Validation (2026-09-23)

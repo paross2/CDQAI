@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 from cdqai.kentucky.mapping import systems_for_record
 from cdqai.kentucky.records import RecordType
 from cdqai.kentucky.systems import TrafficRecordSystem

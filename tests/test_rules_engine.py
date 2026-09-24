@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 import pandas as pd
 
 from cdqai.core.config import DEFAULT_CONFIG, CDQAIConfig

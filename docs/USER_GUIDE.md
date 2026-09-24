@@ -1,4 +1,5 @@
-# CDQAI 2.0.2 User Guide
+<!-- CDQAI file version: 2.2.5 -->
+# CDQAI 2.2.5 User Guide
 
 ## Purpose
 
@@ -23,7 +24,7 @@ The sparse-narrative default is 40 characters. The required fields, candidate in
 
 ### Structured anomaly model
 
-Numeric coded crash fields are cleaned, robustly scaled, and evaluated by an Isolation Forest. Records isolated in fewer model partitions receive higher anomaly values. CDQAI percentile-ranks those values as `StructuredScore_pct` so analysts can interpret each record relative to the analyzed dataset.
+Approved numeric crash fields are evaluated by an Isolation Forest after median imputation. Identifiers, geography, county codes, raw HHMM time, and context fields are excluded by the field-role policy. There is no robust-scaling step. Records isolated in fewer model partitions receive higher anomaly values. CDQAI percentile-ranks those values as `StructuredScore_pct` so analysts can interpret each record relative to the analyzed dataset.
 
 ### Narrative anomaly model
 
@@ -31,7 +32,7 @@ Narratives are transformed into semantic embeddings using `sentence-transformers
 
 ### Evidence thresholds
 
-Default Version 2.0.2 thresholds are:
+Default Version 2.2.5 thresholds are:
 
 - Structured Anomaly: 99.0th percentile
 - Narrative Anomaly: 99.0th percentile
@@ -40,17 +41,17 @@ Default Version 2.0.2 thresholds are:
 - Critical severity: 99.9th percentile
 - Multi-Model Anomaly: at least two qualifying model signals
 
-The dashboard displays values from the active configuration used for the run. Isolation Forest contamination defaults to 2% for both models, but contamination is a fitting assumption rather than the evidence-selection threshold.
+The dashboard displays values from the active configuration used for the run. Isolation Forest contamination defaults to 2% for both models and sets their decision threshold; it is not the evidence-selection threshold.
 
 ### Finding synthesis
 
-Evidence is grouped by MFN. The deterministic Finding Engine assigns a finding type, selects a primary issue, computes priority, and assembles the existing evidence messages into an explanation. Version 2.0.2 does not use Llama or another large language model.
+Evidence is grouped by MFN. The deterministic Finding Engine assigns a finding type, selects a primary issue, computes priority, and assembles the existing evidence messages into an explanation. Version 2.2.5 does not use Llama or another large language model.
 
 Records supported only by missing- or sparse-narrative evidence remain completeness findings. They enter the actionable queue only when another signal exists for the same MFN.
 
 ## Priority Levels
 
-The Finding Engine combines highest severity, highest confidence, source diversity, and independent multi-source agreement.
+The Finding Engine combines highest severity, highest confidence, and source-diversity bonuses. Derived ensemble signals currently contribute to these bonuses, so source diversity should not be interpreted as independent corroboration. See DEVELOPMENT_REVIEW.md for planned corrections.
 
 - **Critical:** priority score of 13 or higher.
 - **High:** 10 to less than 13.

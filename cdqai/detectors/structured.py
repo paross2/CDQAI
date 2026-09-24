@@ -1,3 +1,4 @@
+# CDQAI file version: 2.2.5
 from __future__ import annotations
 
 import logging
@@ -39,7 +40,7 @@ class StructuredAnomalyDetector:
             else:
                 self.excluded_columns[str(column)] = decision.reason
 
-        # Version 2.2.1 deliberately does not truncate by database schema order.
+        # Deliberately do not truncate by database schema order.
         # Administrators can use include_fields for a reviewed, deterministic feature list.
         return selected
 

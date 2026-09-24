@@ -1,4 +1,5 @@
-# CDQAI 2.0 Technical Architecture
+<!-- CDQAI file version: 2.2.5 -->
+# CDQAI Technical Architecture
 
 `run_cdqai.py` delegates to `cdqai.main`. The `--run-all` workflow loads a `CrashDataset`, runs `RuleEngine`, runs structured and narrative model scoring, converts extreme scores through `cdqai.evidence.model_evidence`, combines evidence in `EvidenceCollection`, synthesizes MFN-level findings through `FindingEngine`, and writes reports and the dashboard.
 

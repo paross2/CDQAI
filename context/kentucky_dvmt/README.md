@@ -1,6 +1,7 @@
+<!-- CDQAI file version: 2.2.5 -->
 # Kentucky DVMT and Mileage Context
 
-This directory contains annual Kentucky Transportation Cabinet county-level mileage and Daily Vehicle Miles Traveled (DVMT) workbooks. Version 2.2.0 includes 1997–2025.
+This directory contains annual Kentucky Transportation Cabinet county-level mileage and Daily Vehicle Miles Traveled (DVMT) workbooks for 1997–2025. The workbooks retain their source years independently of the CDQAI software version.
 
 ## Annual maintenance
 
