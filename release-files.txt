@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.2
+# CDQAI file version: 2.3.5
 .gitignore
 AGENTS.md
 AUTHORS.md
@@ -130,3 +130,6 @@ tests/test_review_priority.py
 tests/test_narrative_availability.py
 tests/test_analyst_guidance.py
 docs/ANALYST_GUIDANCE.md
+
+tests/test_dashboard_highlight_pipeline.py
+docs/RELEASE_NOTES_2.3.5.md

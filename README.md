@@ -1,7 +1,7 @@
-<!-- CDQAI file version: 2.3.2 -->
+<!-- CDQAI file version: 2.3.5 -->
 # CDQAI — Crash Data Quality Artificial Intelligence
 
-**Version 2.3.2 — Plain-Language Analyst Guidance**
+**Version 2.3.5 — Reliable Yellow Narrative Highlights**
 
 CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
 
@@ -9,7 +9,7 @@ CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed fo
 
 ## How CDQAI Works
 
-Version 2.3.2 adds [yellow narrative highlights](docs/NARRATIVE_HIGHLIGHTS.md)
+Version 2.3.5 adds [yellow narrative highlights](docs/NARRATIVE_HIGHLIGHTS.md)
 with exact rule matches and bounded model sentence sensitivity, retaining the full text.
 
 Optional [Rec03 severity reconciliation](docs/PERSON_SEVERITY.md) compares person
@@ -107,7 +107,7 @@ Explanations are assembled from existing evidence messages. Duplicate messages a
 
 CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
 
-## Run Version 2.3.2 on Windows
+## Run Version 2.3.5 on Windows
 
 Close any open output CSV files, then double-click:
 
@@ -147,7 +147,7 @@ Or run:
 
 Model percentiles measure relative unusualness within the analyzed dataset; they are not probabilities of error. Crash data alone cannot fully measure accessibility, timeliness, or cross-system integration. Those characteristics require operational or external-system information beyond the crash record itself.
 
-See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.3.2.md` for additional detail.
+See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.3.5.md` for additional detail.
 
 
 ## Authorship, Funding, and Licensing
@@ -160,11 +160,11 @@ Source code is licensed under the **MIT License**. Documentation is licensed und
 
 ## Context-Aware Analysis
 
-Version 2.3.2 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
+Version 2.3.5 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
 
 Add the newest official KYTC workbook to `context/kentucky_dvmt/raw/` each year. CDQAI reports the context year used, fallback type, year gap, source file, and freshness status rather than failing when an exact year is unavailable. The generated `analysis_field_manifest.csv` identifies fields used, retained, or excluded.
 
-## Dashboard narrative companion files (Version 2.3.2)
+## Dashboard narrative companion files (Version 2.3.5)
 
 The dashboard now loads complete narratives on demand. Keep `dashboard.html` and `dashboard_narratives.js` together in the same output directory. When an analyst expands a finding with the `+` button, the dashboard reads that MFN's complete narrative from the companion JavaScript file and renders direct rule evidence with yellow highlighting. `finding_evidence.parquet` provides a durable analyst-ready copy of the full narrative and structured evidence spans; a CSV fallback is produced when Parquet support is unavailable.
 

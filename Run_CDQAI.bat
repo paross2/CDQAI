@@ -1,5 +1,5 @@
 @echo off
-REM CDQAI file version: 2.3.2
+REM CDQAI file version: 2.3.5
 setlocal
 cd /d "%~dp0"
 set /p CDQAI_VERSION=<VERSION

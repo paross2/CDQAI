@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.2 -->
+<!-- CDQAI file version: 2.3.5 -->
 # CDQAI 2.3.1 — Analyst Review and Selected-Crash Reports
 
 This release publishes the accumulated dashboard and local-analysis changes since

@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.2
+# CDQAI file version: 2.3.5
 """Optional Rec03 severity review; never substitutes for Rec01 KABCO."""
 from __future__ import annotations
 

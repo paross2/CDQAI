@@ -1,5 +1,13 @@
-<!-- CDQAI file version: 2.3.2 -->
+<!-- CDQAI file version: 2.3.5 -->
 # Changelog
+
+## 2.3.5 - Reliable Yellow Narrative Highlights
+
+- Builds on the published 2.3.2 release, retaining analyst guidance, selected-crash PDF reports, severity-aware prioritization, and recorded rule/model narrative spans.
+- Normalizes expand-button MFNs to match narrative companion keys, so numeric IDs such as 123.0 load the correct narrative.
+- Uses bright yellow highlighting with explicit dark text for supported narrative evidence.
+- Adds end-to-end coverage for triggers beyond character 500, Unicode offsets, and narrative lookup from expanded findings.
+- Synchronizes every maintained public release file to 2.3.5 using the release inventory.
 
 ## 2.3.2 — Plain-Language Analyst Guidance (2026-09-30)
 

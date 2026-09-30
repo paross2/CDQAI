@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.2
+# CDQAI file version: 2.3.5
 import pandas as pd
 from cdqai.core.config import CDQAIConfig, DEFAULT_CONFIG
 from cdqai.evidence.model_evidence import build_model_evidence

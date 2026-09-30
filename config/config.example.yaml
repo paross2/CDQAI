@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.2
+# CDQAI file version: 2.3.5
 person_severity:
   enabled: false
   table: "MultiYear.dbo.Rec03_2021to2025"
@@ -38,8 +38,8 @@ analyst_guidance:
 project:
   name: "Crash Data Quality Artificial Intelligence"
   short_name: "CDQAI"
-  version: "2.3.2"
-  milestone: "Plain-Language Analyst Guidance"
+  version: "2.3.5"
+  milestone: "Reliable Yellow Narrative Highlights"
 
 paths:
   cache_dir: "cache"

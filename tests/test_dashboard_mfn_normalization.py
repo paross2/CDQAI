@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.2
+# CDQAI file version: 2.3.5
 import pandas as pd
 from cdqai.reports.dashboard_report import _canonical_mfn, _build_narrative_lookup
 from cdqai.data.dataset import CrashDataset, DatasetMetadata
