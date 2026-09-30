@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.1 -->
+<!-- CDQAI file version: 2.3.2 -->
 # Analyst breadcrumbs and severity-aware review priority
 
 The deterministic finding engine remains step 6. Step 7 now adds recorded triggers,
@@ -18,6 +18,16 @@ Each review fact has an E-number. Llama can suggest checks and refer to these fa
 It cannot change a finding, score, rank, or deterministic explanation. A draft is
 unverified: valid references and structured output do not prove its prose is correct.
 Analysts must compare it with the recorded evidence.
+
+Version 2.3.2 asks Llama for short conversational explanations:
+what stood out, what the evidence cannot establish, and a useful next check. Related
+base signals are combined rather than repeating one percentile per paragraph.
+Derived ensemble summaries are omitted from the prompt when base facts exist, while
+remaining visible in the deterministic evidence panel. Recorded sentence-sensitivity
+excerpts (up to two, 240 characters each) can supply local context; they remain
+protected and are sent only to the verified local Ollama service. They do not prove
+a cause or a contradiction. Model outputs are not described as source crash fields.
+This change does not implement uncoded-human-factor discovery.
 
 ## Local Ollama setup
 

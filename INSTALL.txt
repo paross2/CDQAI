@@ -1,5 +1,5 @@
-CDQAI file version: 2.3.1
-CDQAI VERSION 2.3.1 INSTALLATION
+CDQAI file version: 2.3.2
+CDQAI VERSION 2.3.2 INSTALLATION
 
 1. Install Python 3.11 or later.
 2. Open PowerShell in this folder.

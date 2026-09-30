@@ -1,11 +1,11 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 from pathlib import Path
 
 from cdqai.core import build_info
 
 def test_release_metadata():
     assert build_info.VERSION == (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
-    assert build_info.RELEASE_NAME == "Narrative Evidence and Analyst Review"
+    assert build_info.RELEASE_NAME == "Plain-Language Analyst Guidance"
     assert build_info.LEAD_DEVELOPER == "Paul Ross"
     assert build_info.CONTRIBUTING_DEVELOPER == "Nathaniel Swallom"
     assert "OpenAI ChatGPT" in build_info.AI_ATTRIBUTION

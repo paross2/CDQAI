@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 .gitignore
 AGENTS.md
 AUTHORS.md
@@ -108,6 +108,7 @@ tests/test_smoke.py
 tests/test_structured_detector.py
 tools/release_version.py
 VERSION
+docs/RELEASE_NOTES_2.3.2.md
 docs/RELEASE_NOTES_2.3.1.md
 cdqai/reports/review_selection.py
 docs/RELEASE_NOTES_2.3.0.md

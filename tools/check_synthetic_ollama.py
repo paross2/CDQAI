@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 """Exercise Ollama with fabricated evidence only; never load application config."""
 import sys
 import time

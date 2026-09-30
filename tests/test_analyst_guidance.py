@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 from copy import deepcopy
 import json
 import logging
@@ -145,7 +145,7 @@ def test_dashboard_escapes_generated_text(tmp_path, monkeypatch):
         response = fake_service(path, payload)
         if path == "/api/chat":
             response["message"]["content"] = json.dumps({"breadcrumbs": [
-                {"evidence_ids": ["E1"], "fields": [], "text": "<script>fake()</script>"}]})
+                {"evidence_ids": ["E1"], "fields": [], "text": "Review <script>fake()</script>"}]})
         return response
     monkeypatch.setattr(LocalOllama, "_request", request)
     result, _ = add_analyst_guidance(findings, config, logging.getLogger("synthetic"))
@@ -188,3 +188,44 @@ def test_timeout_is_safe_and_remaining_findings_are_not_attempted(tmp_path, monk
     assert result[0].llm_status == "Unavailable (timeout)"
     assert result[1].llm_status == "Not attempted after timeout"
     assert "DO-NOT-LOG-THIS" not in caplog.text
+
+
+def test_prompt_combines_base_evidence_without_derived_repetition(monkeypatch):
+    packets = []
+    def request(self, path, payload=None):
+        packets.append(payload)
+        return fake_service(path, payload)
+    monkeypatch.setattr(LocalOllama, "_request", request)
+    client = LocalOllama(dict(model="llama-test:local", local_only_confirmed=True))
+    facts = [{"id": "E1", "source": "MODEL_STRUCTURED", "fields": ["StructuredScore_pct"], "text": "Fabricated model signal."},
+             {"id": "E2", "source": "MODEL_ENSEMBLE", "fields": ["ModelConfidence"], "text": "Derived summary."}]
+    client.draft(facts, "Fabricated context")
+    packet = json.loads(packets[0]["messages"][1]["content"])
+    assert [x["id"] for x in packet["evidence"]] == ["E1"]
+    prompt = packets[0]["messages"][0]["content"]
+    assert "Two high scores do NOT mean" in prompt
+    assert "Do not just repeat percentiles" in prompt
+
+
+def test_review_facts_include_only_bounded_recorded_sensitivity(tmp_path):
+    from dataclasses import replace
+    from cdqai.findings.review_facts import build_review_facts
+    _, findings = setup_case(tmp_path)
+    evidence = replace(findings[0].evidence[0], source="MODEL_NARRATIVE", supporting_values={
+        "narrative_spans": [{"method": "sentence_removal_sensitivity", "text": "FABRICATED " * 100}]})
+    fact = build_review_facts(replace(findings[0], evidence=(evidence,)))[0]
+    assert "Recorded sentence-sensitivity excerpt" in fact["text"]
+    assert "FABRICATED " * 100 not in fact["text"]
+    assert "does not establish why" in fact["text"]
+
+
+@pytest.mark.parametrize("text", ["The models found the same underlying factors. Check the record.",
+                                  "The structured score is high and the narrative score is high."])
+def test_unsupported_shared_cause_and_no_action_are_rejected(monkeypatch, text):
+    def request(self, path, payload=None):
+        return {"done": True, "message": {"content": json.dumps({"breadcrumbs": [
+            {"evidence_ids": ["E1"], "fields": [], "text": text}]})}}
+    monkeypatch.setattr(LocalOllama, "_request", request)
+    client = LocalOllama(dict(model="llama-test:local", local_only_confirmed=True))
+    with pytest.raises(GuidanceUnavailable):
+        client.draft([{"id": "E1", "source": "MODEL_STRUCTURED", "fields": [], "text": "Fabricated signal."}], "")

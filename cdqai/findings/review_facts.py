@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 """Grounded analyst breadcrumbs independent of an optional language model."""
 from __future__ import annotations
 
@@ -23,6 +23,11 @@ def build_review_facts(finding) -> tuple[dict, ...]:
                      " No individual tail-value field was identified; the signal concerns a combination of variables.")
         elif item.source == "MODEL_NARRATIVE":
             text += " No individual word or sentence is established as the cause of this model score."
+            for span in item.supporting_values.get("narrative_spans", [])[:2]:
+                if span.get("method") == "sentence_removal_sensitivity":
+                    excerpt = str(span.get("text", ""))[:240]
+                    text += (f" Recorded sentence-sensitivity excerpt: {excerpt!r}. "
+                             "Removing its sentence reduced the fitted anomaly score; this does not establish why it is unusual or that it is wrong.")
         elif not item.source.startswith("MODEL_"):
             # Include coded numeric values only. Never copy raw narrative text into the LLM packet.
             for field in fields:

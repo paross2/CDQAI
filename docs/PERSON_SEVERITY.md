@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.1 -->
+<!-- CDQAI file version: 2.3.2 -->
 # Person severity reconciliation
 
 Rec01 `KABCO` remains the crash severity used for priority weighting. The optional

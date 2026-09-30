@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 from cdqai.evidence.objects import Evidence
 from cdqai.evidence.severity import Severity
 from cdqai.kentucky.quality import QualityCharacteristic

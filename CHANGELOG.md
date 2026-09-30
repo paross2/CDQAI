@@ -1,5 +1,11 @@
-<!-- CDQAI file version: 2.3.1 -->
+<!-- CDQAI file version: 2.3.2 -->
 # Changelog
+
+## 2.3.2 — Plain-Language Analyst Guidance (2026-09-30)
+
+- Ask local Llama to combine related evidence, explain limits, and suggest concrete checks.
+- Supply bounded recorded sentence-sensitivity excerpts; avoid repetitive derived summaries.
+- Uncoded-human-factor discovery remains future work and is not implemented.
 
 ## 2.3.1 — Analyst Review and Selected-Crash Reports (2026-09-30)
 

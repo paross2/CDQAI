@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 import pandas as pd
 
 from cdqai.reports.dashboard_report import _findings_table

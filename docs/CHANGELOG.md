@@ -1,5 +1,10 @@
-<!-- CDQAI file version: 2.3.1 -->
+<!-- CDQAI file version: 2.3.2 -->
 # CDQAI Changelog
+
+## 2.3.2 — Plain-Language Analyst Guidance (2026-09-30)
+
+Released conversational, evidence-grounded local Llama drafts. See
+[release notes](RELEASE_NOTES_2.3.2.md) and the [root changelog](../CHANGELOG.md).
 
 ## 2.3.1 — Analyst Review and Selected-Crash Reports (2026-09-30)
 

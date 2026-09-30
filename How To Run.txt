@@ -1,7 +1,7 @@
-CDQAI file version: 2.3.1
+CDQAI file version: 2.3.2
 HOW TO RUN CDQAI
 Crash Data Quality AI - Windows user guide
-Prepared for version 2.3.1
+Prepared for version 2.3.2
 
 WHAT THIS TOOL DOES
 
@@ -17,7 +17,7 @@ and its narrative companion JavaScript file together. No notes are collected.
 Reloading or closing the dashboard clears flags. Saved PDFs contain protected
 information and must remain in your approved local environment.
 
-NARRATIVE HIGHLIGHTS IN VERSION 2.3.1
+NARRATIVE HIGHLIGHTS IN VERSION 2.3.2
 Run Run_CDQAI.bat to regenerate the dashboard, then expand a finding. Yellow
 segments identify exact rule matches or model sentence sensitivity. Hover for
 the reason. Model sentence review covers the top 20 qualifying narrative rows;

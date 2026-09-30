@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.1
+# CDQAI file version: 2.3.2
 """Bounded sentence-removal sensitivity against the fitted narrative model."""
 import hashlib
 import re

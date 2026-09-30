@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.1 -->
+<!-- CDQAI file version: 2.3.2 -->
 # CDQAI – Crash Data Quality Artificial Intelligence
 
 This file is a design outline, not a completed specification. The current
