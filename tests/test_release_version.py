@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from pathlib import Path
 
 import pytest

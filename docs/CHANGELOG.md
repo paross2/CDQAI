@@ -1,5 +1,17 @@
-<!-- CDQAI file version: 2.2.5 -->
+<!-- CDQAI file version: 2.3.1 -->
 # CDQAI Changelog
+
+## 2.3.1 — Analyst Review and Selected-Crash Reports (2026-09-30)
+
+Published the accumulated local changes. See [release notes](RELEASE_NOTES_2.3.1.md)
+and the [root changelog](../CHANGELOG.md).
+
+## 2.3.0 — Narrative Evidence and Analyst Review
+
+- Added full-narrative rule highlights and bounded model sentence sensitivity.
+- Added local analyst guidance, severity-aware priority, and optional Rec03 reconciliation.
+- Added offline model loading and corrected the DVMT CountyCode alias.
+- See [2.3.0 release notes](RELEASE_NOTES_2.3.0.md) and the [root changelog](../CHANGELOG.md).
 
 ## 2.2.5 - Local Setup and Synthetic Validation (2026-09-23)
 

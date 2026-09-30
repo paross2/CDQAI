@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import html
@@ -6,6 +6,7 @@ import json
 import logging
 from datetime import datetime
 import re
+import hashlib
 
 import pandas as pd
 
@@ -14,6 +15,8 @@ from cdqai.core.build_info import (AI_ATTRIBUTION, REPOSITORY_URL, CONTRIBUTING_
 from cdqai.data.dataset import CrashDataset
 from cdqai.evidence.engine import EvidenceCollection
 from cdqai.findings.finding import Finding
+from cdqai.findings.severity_context import GROUPS, priority_settings
+from cdqai.reports.review_selection import REVIEW_CONTROLS, REVIEW_SCRIPT
 
 
 def _table(df: pd.DataFrame) -> str:
@@ -43,33 +46,49 @@ def _build_narrative_lookup(dataset: CrashDataset, mfn_field: str, narrative_fie
             continue
         for mfn_value, narrative_value in zip(frame[mfn_field], frame[narrative_field]):
             key = _canonical_mfn(mfn_value)
-            narrative = "" if pd.isna(narrative_value) else str(narrative_value).strip()
-            if key and narrative and len(narrative) > len(lookup.get(key, "")):
+            narrative = "" if pd.isna(narrative_value) else str(narrative_value)
+            if key and narrative.strip() and len(narrative) > len(lookup.get(key, "")):
                 lookup[key] = narrative
     return lookup
 
 
-def _narrative_payload(text: object, terms: object) -> dict[str, object]:
+def _narrative_payload(text: object, terms: object = "", recorded_spans=None, narrative_model=True) -> dict[str, object]:
     """Create a portable, non-HTML narrative evidence payload."""
     narrative = "" if pd.isna(text) else str(text)
     term_list = sorted({x.strip() for x in str(terms or "").split(";") if x.strip()}, key=str.lower)
     spans: list[dict[str, object]] = []
     for term in sorted(term_list, key=len, reverse=True):
-        for match in re.finditer(re.escape(term), narrative, flags=re.I):
+        for match in re.finditer(r"(?<!\w)" + re.escape(term) + r"(?!\w)", narrative, flags=re.I):
             spans.append({"start": match.start(), "end": match.end(), "text": match.group(0), "reason": "Direct phrase evidence from a deterministic rule"})
     spans.sort(key=lambda x: (int(x["start"]), -int(x["end"])))
+    if recorded_spans is not None:
+        spans = []
+        digest = hashlib.sha256(narrative.encode("utf-8")).hexdigest()
+        for span in recorded_spans:
+            start, end = span.get("start"), span.get("end")
+            if (isinstance(start, int) and isinstance(end, int) and 0 <= start < end <= len(narrative)
+                    and span.get("narrative_sha256") == digest and narrative[start:end] == span.get("text")):
+                spans.append(dict(span))
+        spans.sort(key=lambda x: (x["start"], -x["end"]))
     non_overlapping: list[dict[str, object]] = []
     cursor = -1
     for span in spans:
         if int(span["start"]) >= cursor:
             non_overlapping.append(span)
             cursor = int(span["end"])
+    methods = {span.get("method", "direct_rule_phrase") for span in non_overlapping}
+    method = ("mixed_rule_and_sensitivity" if len(methods) > 1 else next(iter(methods))) if methods else ("narrative_level_statistical" if narrative_model else "no_segment_evidence")
+    explanation = ("Yellow highlights mark exact rule matches and/or sentences whose removal reduced the fitted narrative model score. Hover for the evidence method. Model sensitivity is not proof of error or causation."
+                   if non_overlapping else "No supported segment highlight is available. Sentence review is bounded to selected high-scoring narratives; no individual passage is established as causal."
+                   if narrative_model else "This finding has no recorded narrative-segment trigger. Review its structured or rule evidence.")
+    if recorded_spans is None and not non_overlapping:
+        explanation = "The narrative was statistically unusual as a whole. No individual word or sentence is presented as causal."
     return {
         "narrativeFull": narrative,
         "narrativePreview": narrative[:500],
         "evidenceSpans": non_overlapping,
-        "evidenceMethod": "direct_rule_phrase" if non_overlapping else "narrative_level_statistical",
-        "evidenceExplanation": "Yellow highlighting identifies language used by a deterministic rule." if non_overlapping else "The narrative was statistically unusual as a whole. No individual word or sentence is presented as causal.",
+        "evidenceMethod": method,
+        "evidenceExplanation": ("Yellow highlighting identifies language used by a deterministic rule." if method == "direct_rule_phrase" else explanation),
     }
 
 
@@ -90,6 +109,25 @@ def _highlight_narrative(text: object, terms: object) -> str:
     return f'<div class="narrative-evidence">{"".join(pieces)}</div><p class="attribution-note">{html.escape(str(payload["evidenceExplanation"]))}</p>'
 
 
+def _review_guidance_html(row) -> str:
+    facts = row.get("ReviewFacts", ())
+    facts = facts if isinstance(facts, (list, tuple)) else ()
+    items = "".join(f'<li><strong>{html.escape(str(fact["id"]))}</strong> '
+                    f'{html.escape(str(fact["text"]))}<br><small>Fields: '
+                    f'{html.escape(", ".join(fact["fields"]))}</small></li>' for fact in facts)
+    breadcrumbs = f'<ol>{items}</ol>' if items else '<p>No additional field-level review context is available.</p>'
+    draft = str(row.get("LLMGuidance", "") or "")
+    status = html.escape(str(row.get("LLMStatus", "Disabled")))
+    model = html.escape(str(row.get("LLMModel", "") or ""))
+    guidance = (f'<p style="white-space:pre-wrap">{html.escape(draft)}</p>' if draft else
+                '<p>Use the recorded evidence and deterministic recommendation above.</p>')
+    return (f'<div class="detail-wide"><h4>Recorded triggers and fields worth checking</h4>{breadcrumbs}</div>'
+            f'<div class="detail-wide"><h4>Why this priority?</h4><p>{html.escape(str(row.get("PriorityRationale", "")))}</p></div>'
+            f'<div class="detail-wide"><h4>Local Llama review draft</h4><p>{status} {model}</p>{guidance}'
+            '<p class="attribution-note">Optional analyst breadcrumbs, not new evidence. '
+            'Verify statements against the cited evidence. A generated draft does not change the score or findings.</p></div>')
+
+
 def _findings_table(df: pd.DataFrame, table_id: str = "findings-table", include_filters: bool = False) -> str:
     if df.empty:
         return '<p class="empty">No records in this section.</p>'
@@ -103,7 +141,10 @@ def _findings_table(df: pd.DataFrame, table_id: str = "findings-table", include_
         issue = html.escape(str(row.get("PrimaryIssue", "")))
         strength = html.escape(str(row.get("EvidenceStrength", "")))
         analyst_priority = html.escape(str(row.get("AnalystPriority", "")))
-        summary = (f'<tr class="finding-summary" data-primary-issue="{issue}" data-confidence="{confidence:.1f}" data-evidence-strength="{strength}" data-analyst-priority="{analyst_priority}"><td><button class="expand-button" type="button" aria-expanded="false" aria-controls="{detail_id}" data-mfn="{html.escape(mfn)}">+</button></td>'
+        narrative_status = html.escape(str(row.get("NarrativeStatus", "unknown")))
+        flag = (f'<label class="review-flag"><input type="checkbox" class="flag-review" '
+                f'data-mfn="{html.escape(_canonical_mfn(mfn))}" aria-label="Flag crash {html.escape(mfn)} for review"> Flag for review</label>')
+        summary = (f'<tr class="finding-summary" data-narrative-status="{narrative_status}" data-primary-issue="{issue}" data-confidence="{confidence:.1f}" data-evidence-strength="{strength}" data-analyst-priority="{analyst_priority}"><td><button class="expand-button" type="button" aria-expanded="false" aria-controls="{detail_id}" data-mfn="{html.escape(mfn)}">+</button></td>'
                    f'<td>{html.escape(mfn)}</td><td>{issue}</td><td><span class="priority priority-{priority.lower()}">{priority}</span></td>'
                    f'<td data-sort-value="{confidence:.1f}">{confidence:.1f}</td><td>{strength}</td><td data-sort-value="{count}">{count}</td><td>{analyst_priority}</td></tr>')
         details = (f'<tr id="{detail_id}" class="finding-detail" hidden><td colspan="8"><div class="detail-grid">'
@@ -112,9 +153,11 @@ def _findings_table(df: pd.DataFrame, table_id: str = "findings-table", include_
                    f'<div><h4>Issue categories</h4><p>{html.escape(str(row.get("IssueCategories", "")))}</p></div>'
                    f'<div><h4>Quality characteristics</h4><p>{html.escape(str(row.get("QualityCharacteristics", "")))}</p></div>'
                    f'<div class="detail-wide"><h4>Explanation</h4><p>{html.escape(str(row.get("Explanation", "")))}</p></div>'
+                   f'{_review_guidance_html(row)}'
                    f'<div class="detail-wide"><h4>Evidence sources</h4><p>{html.escape(str(row.get("RuleIDs", "")))}</p></div>'
                    f'<div class="detail-wide"><h4>Narrative evidence</h4><div class="narrative-slot" data-mfn="{html.escape(mfn)}"><p class="loading-note">Open this record to load the complete narrative and highlighted evidence.</p></div></div>'
                    '</div></td></tr>')
+        summary = summary.replace('</button></td>', '</button>' + flag + '</td>', 1)
         rows.append(summary + details)
     issues = sorted({str(x) for x in df.get("PrimaryIssue", pd.Series(dtype="object")).dropna() if str(x)})
     strengths = sorted({str(x) for x in df.get("EvidenceStrength", pd.Series(dtype="object")).dropna() if str(x)})
@@ -129,6 +172,7 @@ def _findings_table(df: pd.DataFrame, table_id: str = "findings-table", include_
 <label>Primary issue<select class="filter-issue"><option value="">All</option>{issue_options}</select></label>
 <label>Evidence strength<select class="filter-strength"><option value="">All</option>{strength_options}</select></label>
 <label>Analyst priority<select class="filter-analyst"><option value="">All</option>{analyst_options}</select></label>
+<label>Narrative review<select class="filter-narrative"><option value="">All</option><option value="highlighted">Has yellow highlights</option><option value="available">Text available, no highlights</option><option value="missing">Narrative unavailable</option></select></label>
 <label>Minimum confidence<input type="number" class="filter-confidence-min" min="0" max="100" step="0.1" placeholder="0"></label>
 <label>Maximum confidence<input type="number" class="filter-confidence-max" min="0" max="100" step="0.1" placeholder="100"></label>
 <button type="button" class="clear-filters">Clear filters</button><span class="filter-count"></span></div>'''
@@ -158,7 +202,6 @@ def build_how_cdqai_works_html(config: CDQAIConfig) -> str:
 
     s_contamination = float(structured.get("contamination", 0.02)) * 100
     n_contamination = float(narrative.get("contamination", 0.02)) * 100
-    max_numeric = int(structured.get("max_numeric_columns", 80))
     embedding_model = str(narrative.get("embedding_model", "sentence-transformers/all-MiniLM-L6-v2"))
     s_weight = float(ensemble.get("structured_weight", 0.5))
     n_weight = float(ensemble.get("narrative_weight", 0.5))
@@ -168,6 +211,13 @@ def build_how_cdqai_works_html(config: CDQAIConfig) -> str:
     high_threshold = float(model_evidence.get("high_percentile", 99.75))
     critical_threshold = float(model_evidence.get("critical_percentile", 99.9))
     multi_min = int(model_evidence.get("multi_model_minimum", 2))
+    severity_field = str(config.raw.get("review_priority", {}).get("severity_field", "KABCO"))
+    priority_rows = ""
+    for group in GROUPS:
+        bonus, weight = priority_settings(config, group)
+        priority_rows += f'<tr><td>{html.escape(group.replace("_", " "))}</td><td>{weight:g}</td><td>+{bonus:g}</td></tr>'
+    guidance_cfg = config.raw.get("analyst_guidance", {})
+    guidance_state = "enabled" if guidance_cfg.get("enabled", False) else "disabled"
 
     return f'''
 <div id="how-cdqai-works">
@@ -187,17 +237,18 @@ def build_how_cdqai_works_html(config: CDQAIConfig) -> str:
 <p>Each rule-generated evidence item records the MFN, evidence category, severity, confidence, source rule, relevant fields, and supporting values.</p>
 
 <h3>3. Score structured crash variables</h3>
-<p>The structured model uses an <strong>Isolation Forest</strong> to evaluate unusual combinations of numeric coded crash variables. MFN is excluded, infinite values are converted to missing, missing numeric values are filled with zero, and variables are robustly scaled. Up to <strong>{max_numeric} numeric fields</strong> are used.</p>
+<p>The structured model uses an <strong>Isolation Forest</strong> to evaluate unusual combinations of approved numeric crash variables. Identifiers, geography, county, raw HHMM time, and context fields are excluded. Infinite values become missing and numeric missing values use median imputation. There is no schema-order feature limit or robust-scaling step. Observed field-tail comparisons are review context, not causal feature attribution.</p>
 <p>Isolation Forest repeatedly partitions the data. Records isolated in fewer partitions are considered more unusual. CDQAI negates the model decision function so larger values represent greater unusualness, then percentile-ranks the scores as <code>StructuredScore_pct</code>. A 99th-percentile record is more unusual than approximately 99% of records in that run.</p>
-<p>The configured structured-model contamination is <strong>{_pct(s_contamination)}%</strong>. Contamination guides model fitting; it is not the final analyst-evidence threshold.</p>
+<p>The configured structured-model contamination is <strong>{_pct(s_contamination)}%</strong>. Contamination sets the model decision threshold; it is not the final analyst-evidence threshold.</p>
 
 <h3>4. Score crash narratives</h3>
-<p>Each narrative is converted into a semantic embedding using <code>{html.escape(embedding_model)}</code>. Embeddings place narratives with similar overall meanings near one another even when they use different words. An Isolation Forest then identifies embeddings that are isolated from the broader narrative corpus.</p>
+<p>Available narratives are represented with semantic embeddings using <code>{html.escape(embedding_model)}</code>. Embeddings place narratives with similar meanings near one another. Blank narratives are excluded from narrative Isolation Forest fitting, scoring, and percentile ranking. Fewer than two available narratives produces no narrative score.</p>
 <p>A narrative may score highly because it describes a rare event, combines unusual concepts, uses atypical language or structure, or is otherwise distant from common narrative patterns. The model does not rely on a fixed suspicious-word list. Scores are percentile-ranked as <code>NarrativeScore_pct</code>. The configured narrative-model contamination is <strong>{_pct(n_contamination)}%</strong>.</p>
 
 <h3>5. Convert model scores into evidence</h3>
 <p>The structured and narrative percentiles are combined as:</p>
-<p class="formula"><code>ModelEnsembleScore = ({_pct(s_weight)} × StructuredScore_pct) + ({_pct(n_weight)} × NarrativeScore_pct)</code></p>
+<p class="formula"><code>ModelEnsembleScore = weighted sum of available scores / sum of available weights</code></p>
+<p>Configured weights: structured {_pct(s_weight)}, narrative {_pct(n_weight)}. A missing narrative receives no semantic anomaly score; available weights are renormalized. Ensemble evidence requires both positively weighted model scores. A single model is not counted again as ensemble corroboration.</p>
 <p>The ensemble results are ranked again to produce <code>ModelConfidence</code>. Model scores become formal evidence only at or above these configured thresholds:</p>
 <table class="data"><thead><tr><th>Evidence or severity</th><th>Threshold</th><th>Interpretation</th></tr></thead><tbody>
 <tr><td>Structured Anomaly</td><td>{_pct(s_threshold)}th percentile</td><td>Approximately the most unusual {100-s_threshold:g}% of structured records</td></tr>
@@ -206,16 +257,19 @@ def build_how_cdqai_works_html(config: CDQAIConfig) -> str:
 <tr><td>High severity</td><td>{_pct(high_threshold)}th percentile</td><td>Approximately the most unusual {100-high_threshold:g}%</td></tr>
 <tr><td>Critical severity</td><td>{_pct(critical_threshold)}th percentile</td><td>Approximately the most unusual {100-critical_threshold:g}%</td></tr>
 </tbody></table>
-<p>A <strong>Multi-Model Anomaly</strong> is generated when at least <strong>{multi_min}</strong> qualifying signals independently flag the same MFN. These signals may be structured, narrative, or ensemble evidence.</p>
+<p>A <strong>Multi-Model Anomaly</strong> requires at least <strong>{multi_min}</strong> qualifying base model types (structured and narrative). Ensemble and multi-model summaries are derived from these base signals; they do not add independent corroboration.</p>
 
 <h3>6. Synthesize findings by MFN</h3>
 <p>CDQAI groups all rule and model evidence by MFN. Version {html.escape(config.version)} uses a <strong>deterministic Finding Engine</strong>; it does not use Llama or another large language model. Records containing only missing- or sparse-narrative evidence remain completeness findings and are excluded from the actionable queue unless another signal exists.</p>
-<p>The engine assigns a finding type, selects the highest-severity and highest-confidence primary issue, and calculates priority using:</p>
-<p class="formula"><code>Priority score = 2 × highest severity + 2 × highest confidence + source-diversity adjustment + multi-source bonus</code></p>
-<p>The source-diversity adjustment adds 0.75 for each additional distinct evidence source, up to three additions. A further 2-point bonus is added when two or more distinct sources agree. Scores map to Critical (13+), High (10–&lt;13), Medium (7–&lt;10), or Low (&lt;7).</p>
+<p>The engine keeps substantive evidence separate from narrative completeness. Derived model summaries do not add source-diversity bonuses when base evidence is present. Crash severity is read from the explicitly configured field <code>{html.escape(severity_field)}</code>; unrecognized or missing codes remain unknown.</p>
+<p class="formula"><code>Priority = substantive evidence score + bounded narrative-completeness adjustment</code></p>
+<p>The substantive score uses twice the maximum severity and twice the maximum confidence, with the narrative-model components scaled by the multiplier below. Source diversity adds 0.75 per additional substantive source (up to three) plus 2 for multiple substantive sources. Completeness adds no confidence or agreement bonus. Completeness-only findings have a zero substantive score and stay outside the actionable queue. Scores map to Critical (13+), High (10–&lt;13), Medium (7–&lt;10), or Low (&lt;7).</p>
+<table class="data"><thead><tr><th>Crash severity group</th><th>Narrative priority multiplier</th><th>Missing/sparse narrative adjustment</th></tr></thead><tbody>{priority_rows}</tbody></table>
+<p>These are configurable review-policy weights, not calibrated error probabilities. Raw anomaly percentiles are retained. Unknown crash severity is not treated as a minor crash.</p>
 <p>Analyst explanations are assembled transparently from the messages attached to the evidence items. Duplicate messages are removed and the remainder are combined. No generative model creates new evidence or determines ground truth.</p>
 
 <h3>7. Produce analyst and management reports</h3>
+<p>Recorded triggers and fields worth checking accompany the deterministic explanation. Optional local Llama guidance is <strong>{guidance_state}</strong>. It drafts evidence-referenced review suggestions for a bounded number of top actionable findings after scoring. Drafts are separate, unverified analyst aids and cannot change scores, evidence, or rank. If local generation is unavailable, deterministic reports remain available.</p>
 <p>CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and this HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.</p>
 <p><strong>Interpretation:</strong> the reports describe evidence observed during this run. Model percentiles measure relative unusualness within the analyzed dataset, not probability of error.</p></div>'''
 
@@ -237,6 +291,7 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
         "Multi-Model Anomalies": int((cats == "Multi-Model Anomaly").sum()),
         "Missing Narratives": int((cats == "Missing Narrative").sum()),
         "Sparse Narratives": int((cats == "Sparse Narrative").sum()),
+        "Findings with unknown crash severity": sum(f.crash_severity == "unknown" for f in findings),
     }
     pd.DataFrame([{"Metric": k, "Value": v, "Interpretation": "Observed evidence; not a conclusion of error"} for k, v in metrics.items()]).to_csv(
         config.outputs_dir / outputs.get("dashboard_summary_file", "dashboard_summary.csv"), index=False
@@ -247,23 +302,33 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
     mfn_field = config.raw["fields"]["normalized_mfn_field"]
     narrative_field = config.raw["fields"]["narrative_text_field"]
     narrative_lookup = _build_narrative_lookup(dataset, mfn_field, narrative_field)
-    signal_pattern = re.compile(r"\b(?:injur(?:y|ed|ies)?|hurt|pain|hospital|ems|ambulance|transport(?:ed)?|airlift(?:ed)?|fatal(?:ity)?|killed|dead|deceased)\b", re.I)
-    highlighted_by_mfn: dict[str, set[str]] = {}
+    spans_by_mfn = {}
+    model_mfns = set()
     for item in evidence.items:
-        if item.source == "KY_REC01_NARRATIVE_INJURY_CONFLICT":
-            narrative_value = str(item.supporting_values.get(narrative_field, narrative_lookup.get(_canonical_mfn(item.mfn), "")))
-            highlighted_by_mfn.setdefault(_canonical_mfn(item.mfn), set()).update(m.group(0) for m in signal_pattern.finditer(narrative_value))
+        key = _canonical_mfn(item.mfn)
+        spans_by_mfn.setdefault(key, []).extend(item.supporting_values.get("narrative_spans", []))
+        if item.source == "MODEL_NARRATIVE":
+            model_mfns.add(key)
     finding_mfns = {_canonical_mfn(x.mfn) for x in findings if _canonical_mfn(x.mfn)}
     narrative_payload = {
-        mfn: _narrative_payload(
-            narrative_lookup.get(mfn, ""),
-            "; ".join(sorted(highlighted_by_mfn.get(mfn, set()), key=str.lower)),
-        )
+        mfn: _narrative_payload(narrative_lookup.get(mfn, ""),
+            recorded_spans=spans_by_mfn.get(mfn, []), narrative_model=mfn in model_mfns)
         for mfn in sorted(finding_mfns)
     }
     missing_flagged = [mfn for mfn, value in narrative_payload.items() if not str(value["narrativeFull"]).strip()]
+    statuses = {mfn: ("missing" if not str(value["narrativeFull"]).strip() else
+                     "highlighted" if value["evidenceSpans"] else "available")
+                for mfn, value in narrative_payload.items()}
+    for frame in (top, all_findings):
+        if not frame.empty:
+            frame["NarrativeStatus"] = frame["MFN"].map(lambda x: statuses.get(_canonical_mfn(x), "unknown"))
+    for status, label in (("highlighted", "Finding MFNs with yellow narrative highlights"),
+                          ("available", "Finding MFNs with text but no highlights"),
+                          ("missing", "Finding MFNs with no narrative text")):
+        count = sum(value == status for value in statuses.values())
+        cards += f'<div class="card"><strong>{count:,}</strong><span>{label}</span></div>'
     if missing_flagged:
-        logger.warning("%s finding records have no complete narrative available.", len(missing_flagged))
+        logger.warning("%s finding records have no narrative text available in the joined dataset; check source-year coverage and identifier matching locally.", len(missing_flagged))
     narrative_data_name = outputs.get("dashboard_narratives_file", "dashboard_narratives.js")
     narrative_data_path = config.outputs_dir / narrative_data_name
     narrative_data_path.write_text(
@@ -299,7 +364,8 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
         "<li><strong>Narrative embeddings:</strong> sentence-transformers/all-MiniLM-L6-v2</li>"
         "<li><strong>Embedding ecosystem:</strong> Sentence Transformers and Hugging Face</li>"
         "<li><strong>Narrative anomaly detection:</strong> Isolation Forest over semantic embeddings</li>"
-        "<li><strong>Finding engine:</strong> Deterministic; no generative LLM used at runtime</li></ul>"
+        "<li><strong>Finding engine:</strong> Deterministic</li>"
+        f"<li><strong>Optional analyst guidance:</strong> {html.escape(str(config.raw.get('analyst_guidance', {}).get('model', '') or 'Disabled / not configured'))}; separate from scoring</li></ul>"
     )
     provenance = f'''<div id="about-cdqai"><div class="detail-grid">
 <div><h3>Project</h3><p><strong>{html.escape(config.project_name)} ({html.escape(config.short_name)})</strong><br>Version {html.escape(config.version)}<br>{html.escape(RELEASE_NAME)}</p></div>
@@ -316,6 +382,7 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
 <header><h1>Crash Data Quality Artificial Intelligence (CDQAI)</h1><h2>Evidence and Review Dashboard — Version {html.escape(config.version)}</h2><p>CDQAI combines deterministic rules and machine-learning anomaly detection to prioritize Kentucky crash records for human review.</p></header>
 <main><div class="note"><strong>Interpretation:</strong> CDQAI reports observable evidence and statistical unusualness. A finding is not a determination that a record is wrong. Analysts must review the underlying record and applicable business rules.</div>
 <section><h2>About This Run</h2><div class="cards">{cards}</div></section>
+{REVIEW_CONTROLS}
 <details class="accordion"><summary>How CDQAI Works</summary><div class="accordion-content">{explanation}</div></details>
 <details class="accordion"><summary>About CDQAI</summary><div class="accordion-content">{provenance}</div></details>
 <details class="accordion" open><summary>Top Actionable Findings</summary><div class="accordion-content"><p>Expand a row for evidence agreement, recommended action, explanation, and sources. Click a column heading to sort.</p>{_findings_table(top, "top-findings-table")}</div></details>
@@ -324,10 +391,11 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
 <footer><strong>Crash Data Quality Artificial Intelligence (CDQAI)</strong><br>Version {html.escape(config.version)} · Kentucky Transportation Center · University of Kentucky<br>Generated: {generated}</footer><script src="{html.escape(str(narrative_data_name))}"></script><script>
 function findingGroups(table){{const groups=[];for(const row of [...table.tBodies[0].rows])if(row.classList.contains('finding-summary'))groups.push([row,row.nextElementSibling]);return groups;}}
 function escapeHtml(value){{return String(value??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));}}
-function renderNarrative(mfn,slot){{const item=(window.CDQAINarratives||{{}})[mfn];if(!item||!String(item.narrativeFull||'').trim()){{slot.innerHTML='<p class="missing-narrative"><strong>Narrative unavailable.</strong> This record cannot be fully spot-checked until the source narrative is restored or rejoined.</p>';return;}}const text=String(item.narrativeFull),spans=[...(item.evidenceSpans||[])].sort((a,b)=>a.start-b.start);let cursor=0,body='';for(const span of spans){{const start=Math.max(cursor,Number(span.start)||0),end=Math.max(start,Number(span.end)||start);body+=escapeHtml(text.slice(cursor,start));body+='<mark title="'+escapeHtml(span.reason||'Highlighted evidence')+'">'+escapeHtml(text.slice(start,end))+'</mark>';cursor=end;}}body+=escapeHtml(text.slice(cursor));const label=item.evidenceMethod==='direct_rule_phrase'?'Direct phrase evidence':'Narrative-level statistical evidence';slot.innerHTML='<div class="evidence-label">'+escapeHtml(label)+'</div><div class="narrative-evidence">'+body+'</div><p class="attribution-note">'+escapeHtml(item.evidenceExplanation||'')+'</p><p class="review-instruction"><strong>What to check:</strong> Compare the highlighted narrative language and coded crash fields against the original report and any available EMS or hospital information.</p>';}}
+function renderNarrative(mfn,slot){{const item=(window.CDQAINarratives||{{}})[mfn];if(!item||!String(item.narrativeFull||'').trim()){{slot.innerHTML='<p class="missing-narrative"><strong>Narrative unavailable.</strong> This record cannot be fully spot-checked until the source narrative is restored or rejoined.</p>';return;}}const text=Array.from(String(item.narrativeFull)),spans=[...(item.evidenceSpans||[])].sort((a,b)=>a.start-b.start);let cursor=0,body='';for(const span of spans){{const start=Math.max(cursor,Number(span.start)||0),end=Math.max(start,Number(span.end)||start);body+=escapeHtml(text.slice(cursor,start).join(''));body+='<mark title="'+escapeHtml(span.reason||'Highlighted evidence')+'">'+escapeHtml(text.slice(start,end).join(''))+'</mark>';cursor=end;}}body+=escapeHtml(text.slice(cursor).join(''));const label=({{'direct_rule_phrase':'Rule-triggered language','sentence_removal_sensitivity':'Model sentence sensitivity','mixed_rule_and_sensitivity':'Rule and model sensitivity','no_segment_evidence':'No narrative-segment trigger'}})[item.evidenceMethod]||'Narrative model: no supported segment highlight';slot.innerHTML='<div class="evidence-label">'+escapeHtml(label)+'</div><div class="narrative-evidence">'+body+'</div><p class="attribution-note">'+escapeHtml(item.evidenceExplanation||'')+'</p><p class="review-instruction"><strong>What to check:</strong> Compare the highlighted narrative language and coded crash fields against the original report and any available EMS or hospital information.</p>';}}
 for(const b of document.querySelectorAll('.expand-button')){{b.addEventListener('click',()=>{{const r=document.getElementById(b.getAttribute('aria-controls'));const opening=r.hidden;r.hidden=!opening;b.textContent=opening?'−':'+';b.setAttribute('aria-expanded',String(opening));if(opening){{const slot=r.querySelector('.narrative-slot');if(slot&&!slot.dataset.loaded){{renderNarrative(b.dataset.mfn,slot);slot.dataset.loaded='true';}}}}}});}}
 for(const table of document.querySelectorAll('table.sortable')){{[...table.querySelectorAll('thead th')].forEach((heading,index)=>{{if(!index)return;heading.addEventListener('click',()=>{{const groups=findingGroups(table);const ascending=heading.dataset.direction!=='asc';table.querySelectorAll('th').forEach(x=>delete x.dataset.direction);heading.dataset.direction=ascending?'asc':'desc';groups.sort((x,y)=>{{const A=x[0].cells[index],B=y[0].cells[index],av=A.dataset.sortValue??A.textContent.trim(),bv=B.dataset.sortValue??B.textContent.trim(),an=Number(av),bn=Number(bv);const comparison=!Number.isNaN(an)&&!Number.isNaN(bn)?an-bn:av.localeCompare(bv,undefined,{{numeric:true}});return ascending?comparison:-comparison;}});for(const group of groups)for(const row of group)table.tBodies[0].appendChild(row);}});}});}}
-for(const controls of document.querySelectorAll('.finding-filters')){{const table=document.getElementById(controls.dataset.table);const search=controls.querySelector('.filter-search'),issue=controls.querySelector('.filter-issue'),strength=controls.querySelector('.filter-strength'),analyst=controls.querySelector('.filter-analyst'),minimum=controls.querySelector('.filter-confidence-min'),maximum=controls.querySelector('.filter-confidence-max'),count=controls.querySelector('.filter-count');const apply=()=>{{let visible=0;for(const [summary,detail] of findingGroups(table)){{const query=search.value.trim().toLowerCase(),confidence=Number(summary.dataset.confidence||0);const show=(!query||summary.textContent.toLowerCase().includes(query))&&(!issue.value||summary.dataset.primaryIssue===issue.value)&&(!strength.value||summary.dataset.evidenceStrength===strength.value)&&(!analyst.value||summary.dataset.analystPriority===analyst.value)&&(!minimum.value||confidence>=Number(minimum.value))&&(!maximum.value||confidence<=Number(maximum.value));summary.hidden=!show;if(detail)detail.hidden=true;const button=summary.querySelector('.expand-button');if(button){{button.textContent='+';button.setAttribute('aria-expanded','false');}}if(show)visible++;}}count.textContent=`${{visible.toLocaleString()}} finding${{visible===1?'':'s'}} shown`;}};for(const input of controls.querySelectorAll('input,select'))input.addEventListener('input',apply);controls.querySelector('.clear-filters').addEventListener('click',()=>{{for(const input of controls.querySelectorAll('input,select'))input.value='';apply();}});apply();}}
+for(const controls of document.querySelectorAll('.finding-filters')){{const table=document.getElementById(controls.dataset.table);const search=controls.querySelector('.filter-search'),issue=controls.querySelector('.filter-issue'),strength=controls.querySelector('.filter-strength'),analyst=controls.querySelector('.filter-analyst'),narrative=controls.querySelector('.filter-narrative'),minimum=controls.querySelector('.filter-confidence-min'),maximum=controls.querySelector('.filter-confidence-max'),count=controls.querySelector('.filter-count');const apply=()=>{{let visible=0;for(const [summary,detail] of findingGroups(table)){{const query=search.value.trim().toLowerCase(),confidence=Number(summary.dataset.confidence||0);const show=(!query||summary.textContent.toLowerCase().includes(query))&&(!issue.value||summary.dataset.primaryIssue===issue.value)&&(!strength.value||summary.dataset.evidenceStrength===strength.value)&&(!analyst.value||summary.dataset.analystPriority===analyst.value)&&(!narrative.value||summary.dataset.narrativeStatus===narrative.value)&&(!minimum.value||confidence>=Number(minimum.value))&&(!maximum.value||confidence<=Number(maximum.value));summary.hidden=!show;if(detail)detail.hidden=true;const button=summary.querySelector('.expand-button');if(button){{button.textContent='+';button.setAttribute('aria-expanded','false');}}if(show)visible++;}}count.textContent=`${{visible.toLocaleString()}} finding${{visible===1?'':'s'}} shown`;}};for(const input of controls.querySelectorAll('input,select'))input.addEventListener('input',apply);controls.querySelector('.clear-filters').addEventListener('click',()=>{{for(const input of controls.querySelectorAll('input,select'))input.value='';apply();}});apply();}}
+{REVIEW_SCRIPT}
 </script></body></html>'''
     path.write_text(document, encoding="utf-8")
     logger.info("Dashboard written: %s", path)

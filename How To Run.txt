@@ -1,9 +1,67 @@
-CDQAI file version: 2.2.5
+CDQAI file version: 2.3.1
 HOW TO RUN CDQAI
 Crash Data Quality AI - Windows user guide
-Prepared for version 2.2.5
+Prepared for version 2.3.1
 
 WHAT THIS TOOL DOES
+
+PRINT SELECTED CRASHES TO PDF
+Check Flag for review beside each desired crash. Flags synchronize between Top
+Actionable Findings and All Findings and survive filtering/sorting during the
+current page session. Click Print flagged crashes / Save as PDF, then choose
+Save as PDF or Microsoft Print to PDF in the browser print dialog. Only selected
+crashes appear, once each, including full available narratives and highlights.
+Allow the local report pop-up if your browser blocks it. Enable background
+graphics in print settings to retain yellow highlighting. Keep the dashboard
+and its narrative companion JavaScript file together. No notes are collected.
+Reloading or closing the dashboard clears flags. Saved PDFs contain protected
+information and must remain in your approved local environment.
+
+NARRATIVE HIGHLIGHTS IN VERSION 2.3.1
+Run Run_CDQAI.bat to regenerate the dashboard, then expand a finding. Yellow
+segments identify exact rule matches or model sentence sensitivity. Hover for
+the reason. Model sentence review covers the top 20 qualifying narrative rows;
+not every finding will have highlights. See docs/NARRATIVE_HIGHLIGHTS.md.
+
+TROUBLESHOOTING LOCAL MODELS AND WARNINGS
+Check_Local_Llama.bat tests llama3:latest with fabricated evidence only. It does
+not load your private configuration or crash data, and omits the generated text.
+Its test timeout is 60 seconds. Configure_CDQAI.bat now sets the production
+timeout to 180 seconds; rerun setup once to apply that setting locally.
+Draft validation failures affect that finding only; service failures stop further
+requests. The dashboard now identifies timeout versus rejected draft failures.
+
+CDQAI runtime uses Hugging Face models offline, without Hub calls or telemetry.
+If the embedding model is missing, obtain it separately before a data run. New
+installers may run this in the project folder during approved model installation:
+.venv\Scripts\python.exe -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+This downloads model assets without reading crash records. An HF token is not
+needed for offline processing. Reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables
+
+The missing-narrative warning counts findings without text in the joined dataset.
+It does not prove all are source omissions. Check narrative year coverage and
+identifier matching privately, particularly after moving to the 2021-2025 period.
+
+CONFIGURE OPTIONAL FEATURES
+Double-click Configure_CDQAI.bat and confirm the local setup. Accept the default
+llama3:latest tag if that is your installed model. The helper enables Rec03 for
+2021-2025, selects Bill.dbo.NarrativesRepaired, preserves connection and narrative
+column settings, and backs up private config
+under outputs/private-config-backups. It does not load crash data.
+If instructed, quit Ollama from the taskbar, reopen it from Start, and run the
+setup again. Wait for "Llama guidance enabled" before expecting Llama drafts.
+Then run Run_CDQAI.bat. New cache names avoid reusing the previous-period cache.
+Changing the narrative source also selects fresh merged and embedding cache names.
+Narratives absent from SQL Server, including unavailable 2025 records, remain missing.
+Ollama remains optional. New installers can install it from https://ollama.com/download/windows
+and obtain an approved local Llama model before using this helper. It performs
+no installation or model download. Local-only setup reference:
+https://docs.ollama.com/faq#how-do-i-disable-ollama-cloud-features
+
+Optional person injury reconciliation: see docs/PERSON_SEVERITY.md for setup.
+This check preserves Rec01 KABCO, keeps injury code 09 unresolved, and writes
+person_severity_review.csv locally. It is disabled until configured. Refresh
+the crash cache when changing source tables or comparing updated records.
 
 CDQAI checks crash records for missing information, possible contradictions,
 and unusual patterns. It creates a dashboard and a ranked list for an analyst
@@ -108,6 +166,16 @@ small practice run.
 
 
 4. VIEW AND INTERPRET THE RESULTS
+
+Expanded findings include recorded triggers, fields worth checking, and a
+"Why this priority?" explanation. An optional Local Llama review draft is separate
+from the original explanation; it does not change scores or evidence. It is off
+until the project owner configures a local-only Ollama model. See
+docs\ANALYST_GUIDANCE.md for setup and the crash-severity priority settings.
+
+Treat generated suggestions as unverified review aids. Field comparisons show
+observed unusual values, not proof of what caused a model score. If crash severity
+shows "unknown", ask the project owner to check the severity-column mapping.
 
 With the default configuration, open:
 

@@ -1,15 +1,24 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 from cdqai.evidence.objects import Evidence
+
+COMPLETENESS_ONLY = {"Missing Narrative", "Sparse Narrative"}
+DERIVED_SOURCES = {"MODEL_ENSEMBLE", "MODEL_MULTI_SIGNAL"}
+
+
+def ranking_evidence(items):
+    substantive = [item for item in items if item.category not in COMPLETENESS_ONLY]
+    base = [item for item in substantive if item.source not in DERIVED_SOURCES]
+    return base or substantive or list(items)
 
 
 def _signal_family(item: Evidence) -> str:
     category = item.category.lower()
     source = item.source.upper()
-    if "structured" in category or "STRUCTURED" in source:
+    if source == "MODEL_STRUCTURED":
         return "Structured Model"
-    if "narrative anomaly" in category or "NARRATIVE" in source and "SPARSE" not in source and "MISSING" not in source:
+    if source == "MODEL_NARRATIVE":
         return "Narrative Model"
     if "ensemble" in category or "ENSEMBLE" in source:
         return "Ensemble Model"
@@ -19,11 +28,12 @@ def _signal_family(item: Evidence) -> str:
 
 
 def evidence_agreement(items: tuple[Evidence, ...] | list[Evidence]) -> str:
-    families = sorted({_signal_family(item) for item in items})
+    families = sorted({_signal_family(item) for item in ranking_evidence(items)})
     return " + ".join(families)
 
 
 def evidence_strength(items: tuple[Evidence, ...] | list[Evidence]) -> str:
+    items = ranking_evidence(items)
     families = {_signal_family(item) for item in items}
     max_severity = max(int(item.severity) for item in items)
     max_confidence = max(float(item.confidence) for item in items)
@@ -39,6 +49,7 @@ def evidence_strength(items: tuple[Evidence, ...] | list[Evidence]) -> str:
 
 
 def confidence_score(items: tuple[Evidence, ...] | list[Evidence]) -> float:
+    items = ranking_evidence(items)
     families = {_signal_family(item) for item in items}
     highest = max(float(item.confidence) for item in items) * 70.0
     agreement = min(max(len(families) - 1, 0) * 8.0, 24.0)
@@ -49,9 +60,9 @@ def confidence_score(items: tuple[Evidence, ...] | list[Evidence]) -> float:
 def analyst_priority(priority_level: str, strength: str, actionable: bool) -> str:
     if not actionable:
         return "Routine Completeness Review"
-    if priority_level == "Critical" or strength == "Very Strong":
+    if priority_level == "Critical":
         return "Immediate Review"
-    if priority_level == "High" or strength == "Strong":
+    if priority_level == "High":
         return "Priority Review"
     if priority_level == "Medium":
         return "Standard Review"
@@ -64,8 +75,6 @@ def recommended_action(items: tuple[Evidence, ...] | list[Evidence], actionable:
         return "Verify narrative availability and completeness; obtain or correct narrative text when required."
     if any("Conflict" in category for category in categories):
         return "Compare coded fields with the narrative and source record; resolve the apparent inconsistency."
-    if "Multi-Model Anomaly" in categories or len({_signal_family(item) for item in items}) >= 3:
-        return "Review the full crash record, coded variables, and narrative together because multiple independent signals agree."
     if "Structured Anomaly" in categories and "Narrative Anomaly" in categories:
         return "Review unusual coded-variable combinations alongside the narrative for corroborating or conflicting details."
     if "Structured Anomaly" in categories:

@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 import logging
 from pathlib import Path
 
@@ -74,3 +74,16 @@ def test_missing_numeric_values_use_median_not_zero():
     df = pd.DataFrame({"A": [10.0, np.nan, 30.0], "B": [0, 1, 1]})
     prepared = StructuredAnomalyDetector._prepare_features(df, ["A", "B"])
     assert prepared[1, 0] == 20.0
+
+
+def test_review_fields_are_observed_context_and_exclude_identifiers():
+    import json
+    df = pd.DataFrame({"MFN": [f"SYNTHETIC-{i}" for i in range(200)],
+                       "NumberVehicles": [1] * 199 + [50],
+                       "CountyNumber": [1] * 199 + [120], "NarrativeTxt": ["Fabricated"] * 200})
+    scored = StructuredAnomalyDetector(make_config(), logging.getLogger("test")).score(df)
+    hints = json.loads(scored.iloc[-1]["StructuredReviewFields"])
+    assert len(hints) == 1
+    assert hints[0]["field"] == "NumberVehicles"
+    assert hints[0]["value"] == 50
+    assert hints[0]["median"] == 1

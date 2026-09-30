@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 """Synchronize reviewed public text files without opening private inputs."""
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ def synchronize(root: Path, *, version: str | None = None, check: bool = False) 
     old = (root / "VERSION").read_text(encoding="utf-8-sig").strip()
     version = version or old
     if not VERSION_RE.fullmatch(version) or not VERSION_RE.fullmatch(old):
-        raise ValueError("VERSION must use MAJOR.MINOR.PATCH, for example 2.2.5")
+        raise ValueError("VERSION must use numeric MAJOR.MINOR.PATCH format")
     paths = release_paths(root)
     changes = {}
     for relative in paths:

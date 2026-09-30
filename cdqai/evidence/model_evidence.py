@@ -1,7 +1,9 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import pandas as pd
+import json
+import math
 
 from cdqai.core.config import CDQAIConfig
 from cdqai.evidence.engine import EvidenceCollection
@@ -34,9 +36,17 @@ def build_model_evidence(scores: pd.DataFrame, config: CDQAIConfig) -> EvidenceC
     items: list[Evidence] = []
     for _, row in scores.iterrows():
         mfn = str(row[mfn_col])
-        s = float(row.get("StructuredScore_pct", 0.0) or 0.0)
-        n = float(row.get("NarrativeScore_pct", 0.0) or 0.0)
-        e = float(row.get("ModelConfidence", row.get("ModelEnsembleScore", 0.0)) or 0.0)
+        def numeric(name):
+            value = row.get(name, 0.0)
+            return float(value) if pd.notna(value) and math.isfinite(float(value)) else 0.0
+        s = numeric("StructuredScore_pct")
+        n = numeric("NarrativeScore_pct")
+        e = numeric("ModelConfidence")
+        if not row.get("NarrativeAvailable", True):
+            n = 0.0
+            e = 0.0
+        if not row.get("EnsembleEligible", True):
+            e = 0.0
         signals: list[str] = []
 
         if s >= structured_t:
@@ -45,16 +55,20 @@ def build_model_evidence(scores: pd.DataFrame, config: CDQAIConfig) -> EvidenceC
                 QualityCharacteristic.ACCURACY, "Structured Anomaly", _severity(s, high_t, critical_t),
                 min(s / 100.0, 1.0),
                 "The record contains an unusual combination of structured crash variables compared with other records.",
-                "MODEL_STRUCTURED", supporting_fields=["StructuredScore_pct"], supporting_values={"percentile": round(s, 4)}))
+                "MODEL_STRUCTURED", supporting_fields=["StructuredScore_pct"], supporting_values={
+                    "percentile": round(s, 4),
+                    "review_fields": json.loads(row.get("StructuredReviewFields", "[]")),
+                    "attribution": "Observed tail values are review context, not causal feature attribution.",
+                }))
         if n >= narrative_t:
             signals.append("Narrative")
             items.append(Evidence(mfn, RecordType.REC01, TrafficRecordSystem.CRASH,
                 QualityCharacteristic.ACCURACY, "Narrative Anomaly", _severity(n, high_t, critical_t),
                 min(n / 100.0, 1.0),
                 "The narrative is statistically unusual compared with other crash narratives and warrants review.",
-                "MODEL_NARRATIVE", supporting_fields=["NarrativeScore_pct"], supporting_values={"percentile": round(n, 4)}))
+                "MODEL_NARRATIVE", supporting_fields=["NarrativeScore_pct"], supporting_values={
+                    "percentile": round(n, 4), "narrative_spans": json.loads(row.get("NarrativeReviewSpans", "[]"))}))
         if e >= ensemble_t:
-            signals.append("Ensemble")
             items.append(Evidence(mfn, RecordType.REC01, TrafficRecordSystem.CRASH,
                 QualityCharacteristic.ACCURACY, "Ensemble Anomaly", _severity(e, high_t, critical_t),
                 min(e / 100.0, 1.0),
@@ -65,7 +79,7 @@ def build_model_evidence(scores: pd.DataFrame, config: CDQAIConfig) -> EvidenceC
             items.append(Evidence(mfn, RecordType.REC01, TrafficRecordSystem.CRASH,
                 QualityCharacteristic.ACCURACY, "Multi-Model Anomaly", _severity(p, high_t, critical_t),
                 min(p / 100.0, 1.0),
-                f"Multiple analytical models independently flagged this record ({', '.join(signals)}).",
+                f"Both base model types flagged this record ({', '.join(signals)}); their summaries are not additional independent evidence.",
                 "MODEL_MULTI_SIGNAL", supporting_fields=signals, supporting_values={"signals": signals}))
 
     return EvidenceCollection(items=items)

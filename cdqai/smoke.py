@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 """A repeatable local run using only fabricated records and isolated outputs."""
 from __future__ import annotations
 
@@ -46,7 +46,9 @@ def run_smoke_test(project_root: Path | None = None) -> int:
         "NumberVehicles": rng.integers(1, 5, size),
         "NumberInjured": rng.integers(0, 3, size),
         "InjurySeverity": ["no injury"] * size,
+        "KABCO": ["O", "K", "A", "B", "C"] * (size // 5) + ["O", "K", "A", "B", "C"][:size % 5],
     })
+    crashes.loc[size - 1, "NumberVehicles"] = 50  # Deliberate fabricated tail-value example.
     text = ["Fabricated example: two vehicles made contact at an intersection."] * size
     text[0] = "Fabricated example: an injured driver was transported by ambulance."
     text[1] = ""

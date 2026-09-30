@@ -1,9 +1,45 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
+person_severity:
+  enabled: false
+  table: "MultiYear.dbo.Rec03_2021to2025"
+
+review_priority:
+  # Set this to the actual crash-level K/A/B/C/O column; unknown values stay unknown.
+  severity_field: "KABCO"
+  severity_codes:
+    fatal: ["K"]
+    serious_injury: ["A"]
+    other_injury: ["B", "C"]
+    property_damage: ["O"]
+  # Provisional review-policy settings, not calibrated probabilities.
+  narrative_priority_weight:
+    fatal: 1.0
+    serious_injury: 1.0
+    other_injury: 0.75
+    property_damage: 0.5
+    unknown: 1.0
+  narrative_completeness_bonus:
+    fatal: 1.5
+    serious_injury: 1.0
+    other_injury: 0.25
+    property_damage: 0.0
+    unknown: 0.0
+
+analyst_guidance:
+  enabled: false
+  # Exact installed local Llama tag. No downloads or cloud fallback are performed.
+  model: ""
+  port: 11434
+  # Set true only after an authorized operator disables Ollama cloud and restarts it.
+  local_only_confirmed: false
+  max_findings: 20
+  timeout_seconds: 60
+
 project:
   name: "Crash Data Quality Artificial Intelligence"
   short_name: "CDQAI"
-  version: "2.2.5"
-  milestone: "Local Setup and Synthetic Validation"
+  version: "2.3.1"
+  milestone: "Narrative Evidence and Analyst Review"
 
 paths:
   cache_dir: "cache"
@@ -73,6 +109,9 @@ models:
   narrative:
     enabled: true
     embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+    sentence_review:
+      enabled: true
+      max_records: 20
     batch_size: 256
     contamination: 0.02
     random_state: 42

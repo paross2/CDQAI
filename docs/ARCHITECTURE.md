@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.2.5 -->
+<!-- CDQAI file version: 2.3.1 -->
 # CDQAI Architecture
 
 CDQAI is organized around stable architectural layers rather than temporary sprint folders.
@@ -9,7 +9,7 @@ Defines the Kentucky-specific traffic records model:
 
 - Rec01: Crash and Roadway
 - Rec02: Vehicle
-- Rec03: Driver
+- Rec03: Person (optional severity comparison; broader person evaluation is future work)
 
 ## Core
 
@@ -43,8 +43,8 @@ The separate `explain/` package is a reserved extension point.
 
 ## LLM
 
-Reserved for a possible future local reviewer. No LLM currently determines
-anomalies or generates the finding explanations.
+Optional local Ollama/Llama drafts supplement deterministic explanations after
+finding synthesis. Llama does not determine anomalies, scores, or rankings.
 
 ## Reports
 

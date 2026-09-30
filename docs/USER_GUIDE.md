@@ -1,5 +1,5 @@
-<!-- CDQAI file version: 2.2.5 -->
-# CDQAI 2.2.5 User Guide
+<!-- CDQAI file version: 2.3.1 -->
+# CDQAI 2.3.1 User Guide
 
 ## Purpose
 
@@ -32,7 +32,7 @@ Narratives are transformed into semantic embeddings using `sentence-transformers
 
 ### Evidence thresholds
 
-Default Version 2.2.5 thresholds are:
+Default Version 2.3.1 thresholds are:
 
 - Structured Anomaly: 99.0th percentile
 - Narrative Anomaly: 99.0th percentile
@@ -45,13 +45,13 @@ The dashboard displays values from the active configuration used for the run. Is
 
 ### Finding synthesis
 
-Evidence is grouped by MFN. The deterministic Finding Engine assigns a finding type, selects a primary issue, computes priority, and assembles the existing evidence messages into an explanation. Version 2.2.5 does not use Llama or another large language model.
+Evidence is grouped by MFN. The deterministic Finding Engine assigns a finding type, selects a primary issue, computes priority, and assembles the existing evidence messages into an explanation. Version 2.3.1 does not use Llama or another large language model.
 
 Records supported only by missing- or sparse-narrative evidence remain completeness findings. They enter the actionable queue only when another signal exists for the same MFN.
 
 ## Priority Levels
 
-The Finding Engine combines highest severity, highest confidence, and source-diversity bonuses. Derived ensemble signals currently contribute to these bonuses, so source diversity should not be interpreted as independent corroboration. See DEVELOPMENT_REVIEW.md for planned corrections.
+The Finding Engine combines substantive severity/confidence contributions and source-diversity bonuses. Derived ensemble summaries and narrative completeness do not inflate base-signal agreement. Narrative priority uses crash-severity weights; see ANALYST_GUIDANCE.md for the provisional policy.
 
 - **Critical:** priority score of 13 or higher.
 - **High:** 10 to less than 13.

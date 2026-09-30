@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import argparse
@@ -58,6 +58,7 @@ def run_health_check() -> int:
 
 
 def load_dataset(config, logger, refresh_cache: bool = False):
+    from cdqai.data.person_severity import attach_person_severity
     cached_merged = None
 
     if config.use_cache and not refresh_cache:
@@ -66,7 +67,8 @@ def load_dataset(config, logger, refresh_cache: bool = False):
 
     if cached_merged is not None:
         with timed_step(logger, "Building dataset from merged cache"):
-            return build_dataset_from_merged_cache(cached_merged, config, logger)
+            dataset = build_dataset_from_merged_cache(cached_merged, config, logger)
+            return attach_person_severity(dataset, config, logger)
 
     with timed_step(logger, "Connecting to SQL Server"):
         db = DatabaseManager(config=config, logger=logger)
@@ -85,7 +87,7 @@ def load_dataset(config, logger, refresh_cache: bool = False):
         with timed_step(logger, "Writing merged dataframe cache"):
             write_dataframe_cache(dataset.merged, config.merged_cache_path, logger)
 
-    return dataset
+    return attach_person_severity(dataset, config, logger, db=db)
 
 
 def run_data_pipeline(refresh_cache: bool = False) -> int:
@@ -199,6 +201,7 @@ def run_all(refresh_cache: bool = False, *, config=None, dataset=None) -> int:
     from cdqai.evidence.engine import EvidenceCollection
     from cdqai.evidence.model_evidence import build_model_evidence
     from cdqai.findings.engine import FindingEngine
+    from cdqai.llm.analyst_guidance import add_analyst_guidance
     from cdqai.reports.dashboard_report import write_dashboard
     from cdqai.reports.finding_report import write_finding_outputs
     from cdqai.reports.model_report import write_model_outputs
@@ -225,12 +228,16 @@ def run_all(refresh_cache: bool = False, *, config=None, dataset=None) -> int:
         with timed_step(logger, "Writing unified evidence outputs"):
             write_evidence_outputs(evidence, config, logger)
         with timed_step(logger, "Synthesizing analyst findings"):
-            findings = FindingEngine().run(evidence)
+            findings = FindingEngine().run(evidence, dataset=dataset, config=config)
+        with timed_step(logger, "Preparing analyst review guidance"):
+            findings, guidance_metadata = add_analyst_guidance(findings, config, logger)
+        with timed_step(logger, "Writing findings"):
             write_finding_outputs(findings, dataset, config, logger)
         with timed_step(logger, "Writing dashboard"):
             write_dashboard(dataset, evidence, findings, config, logger)
         elapsed = time.perf_counter() - start
         metadata = dict(model_metadata)
+        metadata["analyst_guidance"] = guidance_metadata
         metadata.update({"rule_evidence": len(rule_evidence.items), "model_evidence": len(model_evidence.items), "findings": len(findings)})
         write_run_manifest(config, elapsed, dataset.metadata, model_metadata=metadata)
         logger.info("CDQAI unified evidence pipeline completed successfully.")

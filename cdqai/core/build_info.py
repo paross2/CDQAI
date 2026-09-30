@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import importlib.metadata
@@ -11,11 +11,11 @@ from typing import Any
 
 PROJECT_NAME = "Crash Data Quality Artificial Intelligence"
 SHORT_NAME = "CDQAI"
-VERSION = "2.2.5"
-RELEASE_NAME = "Local Setup and Synthetic Validation"
+VERSION = "2.3.1"
+RELEASE_NAME = "Narrative Evidence and Analyst Review"
 REPOSITORY_URL = "https://github.com/paross2/CDQAI"
 DEFAULT_BRANCH = "main"
-DEFAULT_TAG = "v2.2.5"
+DEFAULT_TAG = "v2.3.1"
 
 LEAD_DEVELOPER = "Paul Ross"
 LEAD_TITLE = "Research Scientist Principal"

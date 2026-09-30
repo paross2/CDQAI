@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 .gitignore
 AGENTS.md
 AUTHORS.md
@@ -108,3 +108,24 @@ tests/test_smoke.py
 tests/test_structured_detector.py
 tools/release_version.py
 VERSION
+docs/RELEASE_NOTES_2.3.1.md
+cdqai/reports/review_selection.py
+docs/RELEASE_NOTES_2.3.0.md
+cdqai/detectors/narrative_spans.py
+tests/test_narrative_spans.py
+docs/NARRATIVE_HIGHLIGHTS.md
+Check_Local_Llama.bat
+tools/check_synthetic_ollama.py
+Configure_CDQAI.bat
+tools/configure_local.py
+tests/test_configure_local.py
+cdqai/data/person_severity.py
+tests/test_person_severity.py
+docs/PERSON_SEVERITY.md
+cdqai/findings/severity_context.py
+cdqai/findings/review_facts.py
+cdqai/llm/analyst_guidance.py
+tests/test_review_priority.py
+tests/test_narrative_availability.py
+tests/test_analyst_guidance.py
+docs/ANALYST_GUIDANCE.md

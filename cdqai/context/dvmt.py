@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import hashlib
@@ -186,6 +186,8 @@ class DVMTContextManager:
         fields = self.cfg.get("fields", {})
         year_candidates = fields.get("year_candidates", ["CrashYear", "YR", "Year", "Crash_Year"])
         county_candidates = fields.get("county_candidates", ["CountyNumber", "County_Number", "CountyNo", "COUNTY", "CNTY"])
+        # Known Rec01 schema alias, including installations with older explicit candidate lists.
+        county_candidates = [*county_candidates, "CountyCode"]
         year_col = self._first_existing(df.columns, year_candidates)
         county_col = self._first_existing(df.columns, county_candidates)
         out = df.copy()

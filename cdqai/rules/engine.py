@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import logging
@@ -29,7 +29,8 @@ class RuleEngine:
     rule_classes: tuple[type[BaseRule], ...] = field(default_factory=lambda: DEFAULT_RULES)
 
     def run(self, dataset: CrashDataset) -> EvidenceCollection:
-        all_evidence: list[Evidence] = []
+        from cdqai.data.person_severity import severity_evidence
+        all_evidence: list[Evidence] = severity_evidence(getattr(dataset, "person_severity_review", None))
 
         self.logger.info("Running Kentucky Rule Engine with %s rules.", len(self.rule_classes))
 

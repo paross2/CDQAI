@@ -1,7 +1,8 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import re
+import hashlib
 
 import pandas as pd
 
@@ -85,6 +86,10 @@ class NarrativeInjuryConflictRule(BaseRule):
                         supporting_values={
                             narrative: str(row[narrative])[:500],
                             field: row[field],
+                            "narrative_spans": [dict(start=m.start(), end=m.end(), text=m.group(),
+                                method="direct_rule_phrase", reason=f"Matched injury-language rule; compare with {field}.",
+                                narrative_sha256=hashlib.sha256(str(row[narrative]).encode('utf-8')).hexdigest())
+                                for m in INJURY_SIGNAL_RE.finditer(str(row[narrative]))],
                         },
                     )
                 )

@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 from copy import deepcopy
@@ -13,6 +13,24 @@ from cdqai.core.paths import find_project_root
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
+    "person_severity": {"enabled": False, "table": "MultiYear.dbo.Rec03_2021to2025"},
+    "review_priority": {
+        "severity_field": "KABCO",
+        "severity_codes": {"fatal": ["K"], "serious_injury": ["A"],
+                           "other_injury": ["B", "C"], "property_damage": ["O"]},
+        "narrative_priority_weight": {"fatal": 1.0, "serious_injury": 1.0,
+                                      "other_injury": 0.75, "property_damage": 0.5, "unknown": 1.0},
+        "narrative_completeness_bonus": {"fatal": 1.5, "serious_injury": 1.0,
+                                         "other_injury": 0.25, "property_damage": 0.0, "unknown": 0.0},
+    },
+    "analyst_guidance": {
+        "enabled": False,
+        "model": "",
+        "port": 11434,
+        "local_only_confirmed": False,
+        "max_findings": 20,
+        "timeout_seconds": 60,
+    },
     "project": {
         "name": __project_name__,
         "short_name": __short_name__,
@@ -85,6 +103,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "narrative": {
             "enabled": True,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "sentence_review": {"enabled": True, "max_records": 20},
             "batch_size": 256,
             "contamination": 0.02,
             "random_state": 42,

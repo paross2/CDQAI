@@ -1,7 +1,8 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 
 import logging
+import json
 
 import numpy as np
 import pandas as pd
@@ -75,4 +76,29 @@ class StructuredAnomalyDetector:
         )
         raw = -model.fit(x).decision_function(x)
         pct = percentile_rank(raw)
-        return pd.DataFrame({mfn: df[mfn].to_numpy(), "StructuredScore": raw, "StructuredScore_pct": pct})
+        result = pd.DataFrame({mfn: df[mfn].to_numpy(), "StructuredScore": raw, "StructuredScore_pct": pct})
+        result["StructuredReviewFields"] = self.review_fields(df, numeric_cols, pct)
+        return result
+
+    def review_fields(self, df, columns, percentiles) -> list[str]:
+        """Describe observed tail values, not causal feature attribution for the forest."""
+        threshold = float(self.config.raw.get("model_evidence", {}).get("structured_percentile", 99.0))
+        positions = np.flatnonzero(percentiles >= threshold)
+        hints = {int(i): [] for i in positions}
+        for column in columns:
+            values = pd.to_numeric(df[column], errors="coerce").replace([np.inf, -np.inf], np.nan)
+            low, median, high = values.quantile([0.01, 0.5, 0.99]).tolist()
+            if not all(np.isfinite(v) for v in (low, median, high)):
+                continue
+            scale = max(high - low, 1.0)
+            for position in positions:
+                value = values.iloc[position]
+                if pd.notna(value) and (value < low or value > high):
+                    hints[int(position)].append({"field": column, "value": float(value),
+                                                 "p01": float(low), "median": float(median),
+                                                 "p99": float(high), "distance": abs(float(value) - median) / scale})
+        result = ["[]"] * len(df)
+        for position, values in hints.items():
+            top = sorted(values, key=lambda v: (-v["distance"], v["field"]))[:3]
+            result[position] = json.dumps([{k: v for k, v in item.items() if k != "distance"} for item in top], allow_nan=False)
+        return result

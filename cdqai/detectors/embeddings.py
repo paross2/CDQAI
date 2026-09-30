@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from __future__ import annotations
 import json, logging
 import numpy as np
@@ -6,6 +6,12 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from cdqai.core.config import CDQAIConfig
 class NarrativeEmbeddingManager:
+    def encode_review_texts(self, texts):
+        cfg = self.config.raw["models"]["narrative"]
+        if not hasattr(self, "_review_embedder"):
+            self._review_embedder = SentenceTransformer(cfg.get("embedding_model", "sentence-transformers/all-MiniLM-L6-v2"), local_files_only=True)
+        embedder = self._review_embedder
+        return embedder.encode(texts, batch_size=int(cfg.get("batch_size", 256)), convert_to_numpy=True, show_progress_bar=False)
     def __init__(self, config: CDQAIConfig, logger: logging.Logger) -> None: self.config=config; self.logger=logger
     def load_cached_embeddings(self, expected_mfns: list[str]) -> np.ndarray | None:
         ep=self.config.narrative_embeddings_path; ip=self.config.narrative_embedding_index_path
@@ -26,7 +32,11 @@ class NarrativeEmbeddingManager:
         if self.config.use_cache and not refresh_cache:
             cached=self.load_cached_embeddings(mfns)
             if cached is not None: return cached
-        self.logger.info("Loading embedding model: %s", model_name); embedder=SentenceTransformer(model_name)
+        self.logger.info("Loading local embedding model: %s", model_name)
+        try:
+            embedder=SentenceTransformer(model_name, local_files_only=True)
+        except OSError:
+            raise RuntimeError("Embedding model is not available locally. Install model assets separately before running CDQAI; see How To Run.txt.") from None
         narratives=df[narrative_text].fillna("").astype(str).tolist(); self.logger.info("Generating narrative embeddings for %s records.", f"{len(narratives):,}")
         embeddings=embedder.encode(narratives,batch_size=batch_size,show_progress_bar=True,convert_to_numpy=True)
         if self.config.write_cache: self.write_cached_embeddings(embeddings, mfns)

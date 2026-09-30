@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from cdqai.evidence.objects import Evidence
 from cdqai.evidence.severity import Severity
 from cdqai.kentucky.quality import QualityCharacteristic
@@ -22,7 +22,7 @@ def test_multi_source_decision_support():
         make("Narrative Anomaly", "MODEL_NARRATIVE"),
         make("Ensemble Anomaly", "MODEL_ENSEMBLE", Severity.CRITICAL, 1.0),
     )
-    assert evidence_agreement(items) == "Ensemble Model + Narrative Model + Structured Model"
-    assert evidence_strength(items) == "Very Strong"
-    assert confidence_score(items) == 86.0
-    assert "multiple independent signals" in recommended_action(items, True)
+    assert evidence_agreement(items) == "Narrative Model + Structured Model"
+    assert evidence_strength(items) == "Strong"
+    assert confidence_score(items) == 77.3
+    assert "coded-variable combinations" in recommended_action(items, True)

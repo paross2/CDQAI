@@ -1,13 +1,20 @@
-<!-- CDQAI file version: 2.2.5 -->
+<!-- CDQAI file version: 2.3.1 -->
 # CDQAI — Crash Data Quality Artificial Intelligence
 
-**Version 2.2.5 — Local Setup and Synthetic Validation**
+**Version 2.3.1 — Narrative Evidence and Analyst Review**
 
 CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
 
 > CDQAI reports evidence, not conclusions. A finding indicates that a record is incomplete, internally inconsistent, or statistically unusual. It does not establish that the record is incorrect.
 
 ## How CDQAI Works
+
+Version 2.3.1 adds [yellow narrative highlights](docs/NARRATIVE_HIGHLIGHTS.md)
+with exact rule matches and bounded model sentence sensitivity, retaining the full text.
+
+Optional [Rec03 severity reconciliation](docs/PERSON_SEVERITY.md) compares person
+injuries with Rec01 KABCO while preserving code 09 as an unresolved reconciliation
+flag. It does not replace KABCO or alter the model's crash rows.
 
 ### 1. Load and validate
 
@@ -59,11 +66,11 @@ The ensemble results are ranked again to produce `ModelConfidence`. Scores becom
 | High severity | 99.75th percentile | Approximately the most unusual 0.25% |
 | Critical severity | 99.9th percentile | Approximately the most unusual 0.1% |
 
-A Multi-Model Anomaly is generated when at least two qualifying structured, narrative, or ensemble signals flag the same MFN. Thresholds and weights are configurable in `config/config.yaml`. The dashboard reads and displays the active values used for the run.
+A Multi-Model Anomaly requires qualifying structured and narrative signals for the same MFN; the derived ensemble does not count as another independent signal. Blank narratives are not scored. Available model weights are renormalized, and ensemble evidence requires both models. Thresholds and weights are configurable in `config/config.yaml`.
 
 ### 6. Synthesize findings by MFN
 
-CDQAI groups all rule and model evidence by MFN. Version 2.2.5 uses a deterministic Finding Engine; it does not use Llama or another large language model.
+CDQAI groups all rule and model evidence by MFN. The Finding Engine is deterministic. Optional local Llama drafts are added separately in step 7 and cannot change findings or scores.
 
 A finding containing only missing- or sparse-narrative evidence is treated as completeness information and excluded from the actionable queue unless another signal exists.
 
@@ -82,9 +89,10 @@ Priority score =
     + 2 × highest confidence
     + source-diversity adjustment
     + multi-source bonus
+    + bounded narrative-completeness adjustment
 ```
 
-The source-diversity adjustment adds 0.75 for each additional distinct source, up to three additions. A 2-point bonus is added when at least two distinct sources agree.
+The source-diversity adjustment adds 0.75 for each additional substantive source, up to three additions. A 2-point bonus is added when at least two such sources agree. Completeness and derived summaries do not inflate these bonuses. Narrative severity/confidence contributions use crash-severity multipliers; completeness-only findings receive only their bounded adjustment and remain non-actionable. See [the priority policy](docs/ANALYST_GUIDANCE.md#priority-policy) for the provisional weights.
 
 | Priority | Score |
 |---|---:|
@@ -99,7 +107,7 @@ Explanations are assembled from existing evidence messages. Duplicate messages a
 
 CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
 
-## Run Version 2.2.5 on Windows
+## Run Version 2.3.1 on Windows
 
 Close any open output CSV files, then double-click:
 
@@ -139,7 +147,7 @@ Or run:
 
 Model percentiles measure relative unusualness within the analyzed dataset; they are not probabilities of error. Crash data alone cannot fully measure accessibility, timeliness, or cross-system integration. Those characteristics require operational or external-system information beyond the crash record itself.
 
-See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.1.2.md` for additional detail.
+See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.3.1.md` for additional detail.
 
 
 ## Authorship, Funding, and Licensing
@@ -152,14 +160,28 @@ Source code is licensed under the **MIT License**. Documentation is licensed und
 
 ## Context-Aware Analysis
 
-Version 2.2.5 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
+Version 2.3.1 includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
 
 Add the newest official KYTC workbook to `context/kentucky_dvmt/raw/` each year. CDQAI reports the context year used, fallback type, year gap, source file, and freshness status rather than failing when an exact year is unavailable. The generated `analysis_field_manifest.csv` identifies fields used, retained, or excluded.
 
-## Dashboard narrative companion files (Version 2.2.5)
+## Dashboard narrative companion files (Version 2.3.1)
 
 The dashboard now loads complete narratives on demand. Keep `dashboard.html` and `dashboard_narratives.js` together in the same output directory. When an analyst expands a finding with the `+` button, the dashboard reads that MFN's complete narrative from the companion JavaScript file and renders direct rule evidence with yellow highlighting. `finding_evidence.parquet` provides a durable analyst-ready copy of the full narrative and structured evidence spans; a CSV fallback is produced when Parquet support is unavailable.
 
 ## Local development
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for Python 3.11, VS Code, private configuration, tests, and the isolated synthetic run: `python -m cdqai.main --smoke-test`. See [docs/DEVELOPMENT_REVIEW.md](docs/DEVELOPMENT_REVIEW.md) for the current implementation review and next priorities.
+### Analyst breadcrumbs and crash-severity priority
+
+Expanded findings now include recorded triggers, observed field comparisons,
+and an explanation of their priority. Optional local Ollama/Llama drafts can
+provide additional evidence-referenced review suggestions in step 7; step 6
+remains deterministic. Drafts are disabled until explicitly configured.
+
+Blank narratives are excluded from semantic anomaly scoring. Missing/sparse
+narrative evidence contributes only a bounded severity-dependent priority bonus,
+and narrative-model priority is reduced for mapped B/C/O crashes. Configure the
+actual K/A/B/C/O severity column; missing/unmapped severity is not assumed minor.
+See [analyst guidance setup and policy](docs/ANALYST_GUIDANCE.md) for settings,
+limitations, local-only Ollama requirements, and provisional weights.
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for Python 3.11, VS Code, private configuration, tests, and the isolated synthetic run: `python -m cdqai.main --smoke-test`. The historical [development review](docs/DEVELOPMENT_REVIEW.md) describes the September 23 baseline; several issues have since been fixed.

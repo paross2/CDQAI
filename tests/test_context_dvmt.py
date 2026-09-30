@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 from pathlib import Path
 import logging
 import pandas as pd
@@ -28,3 +28,14 @@ def test_county_and_context_fields_excluded_from_structured_model():
     config=load_config(); detector=StructuredAnomalyDetector(config, logging.getLogger('test'))
     df=pd.DataFrame({'MFN':['1','2'],'CountyNumber':[1,2],'Speed':[10,20],'ContextTotalDVMTThousands':[100,200]})
     assert detector.select_features(df)==['Speed']
+
+
+def test_rec01_countycode_alias_with_older_config(monkeypatch):
+    config = load_config()
+    manager = DVMTContextManager(config, logging.getLogger('synthetic'))
+    context = pd.DataFrame([dict(ContextYear=2025, CountyNumber=1, CountyName="Fabricated",
+        UrbanRural="Rural", TotalDVMTThousands=123.0, SourceFile="fabricated.xlsx")])
+    monkeypatch.setattr(manager, "load", lambda refresh=False: context)
+    result, _ = manager.enrich(pd.DataFrame({"YR": [2025], "CountyCode": [1]}))
+    assert result.iloc[0].ContextStatus == "USABLE"
+    assert result.iloc[0].ContextTotalDVMTThousands == 123.0

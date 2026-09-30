@@ -1,5 +1,34 @@
-<!-- CDQAI file version: 2.2.5 -->
+<!-- CDQAI file version: 2.3.1 -->
 # Changelog
+
+## 2.3.1 — Analyst Review and Selected-Crash Reports (2026-09-30)
+
+- Published the accumulated local 2.3.0 feature work with synchronized 2.3.1 file markers.
+- Includes narrative highlights, severity review, local Llama drafts, review flags, and selected-crash printing.
+- See [2.3.1 release notes](docs/RELEASE_NOTES_2.3.1.md) for scope and validation limits.
+
+## 2.3.0 - Narrative evidence and analyst review
+
+- Added session-only per-crash review flags and a selected-crash print/PDF report without analyst notes.
+
+- Local setup now selects Bill.dbo.NarrativesRepaired and invalidates old-source caches.
+
+- Added exact full-narrative rule spans and bounded model sentence-removal sensitivity.
+- Yellow highlights retain surrounding narrative text and label the evidence method.
+- Protected spans against mismatched narratives and corrected Unicode browser offsets.
+
+- Added CountyCode DVMT alias, offline embedding-model loading, and safe Llama failure codes.
+- Constrained draft field/evidence identifiers and kept rejected drafts from cancelling other findings.
+- Added a fabricated-only local Llama diagnostic launcher.
+
+- Added optional Rec03 severity comparison, a local review CSV, and discrepancy evidence.
+- Preserved injury code 09 as unresolved FARS reconciliation; Rec01 KABCO remains the priority source.
+
+- Added recorded field comparisons and priority rationale to expanded findings.
+- Added optional local Ollama/Llama review drafts after deterministic finding synthesis.
+- Excluded blank narratives from semantic scoring and removed derived-signal double counting.
+- Added configurable K/A/B/C/O narrative priority multipliers and bounded completeness bonuses.
+- Added synthetic regression coverage; real-data review and model setup remain local user tasks.
 
 ## Maintenance on main - release-file consistency
 

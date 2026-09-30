@@ -1,4 +1,4 @@
-# CDQAI file version: 2.2.5
+# CDQAI file version: 2.3.1
 import pandas as pd
 
 from cdqai.reports.dashboard_report import _findings_table
@@ -26,5 +26,9 @@ def test_all_findings_table_includes_filters_and_unique_table_id():
     assert 'id="all-findings-table"' in rendered
     assert 'class="filter-issue"' in rendered
     assert 'class="filter-strength"' in rendered
+    assert 'class="filter-narrative"' in rendered
+    assert 'Has yellow highlights' in rendered
+    assert 'class="flag-review"' in rendered
+    assert 'aria-label="Flag crash 123 for review"' in rendered
     assert 'class="filter-confidence-min"' in rendered
     assert 'all-findings-table-finding-detail-0' in rendered
