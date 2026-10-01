@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 person_severity:
   enabled: false
   table: "MultiYear.dbo.Rec03_2021to2025"
@@ -38,8 +38,8 @@ analyst_guidance:
 project:
   name: "Crash Data Quality Artificial Intelligence"
   short_name: "CDQAI"
-  version: "2.3.5"
-  milestone: "Reliable Yellow Narrative Highlights"
+  version: "2.3.6"
+  milestone: "AI Powered Crash Data Anomaly Detector"
 
 paths:
   cache_dir: "cache"
@@ -109,9 +109,11 @@ models:
   narrative:
     enabled: true
     embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+    chunk_overlap_tokens: 32
     sentence_review:
       enabled: true
       max_records: 20
+      max_sentences: 12
     batch_size: 256
     contamination: 0.02
     random_state: 42

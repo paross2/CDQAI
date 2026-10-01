@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from cdqai.findings.engine import FindingEngine
 from cdqai.findings.finding import Finding
 __all__ = ["Finding", "FindingEngine"]

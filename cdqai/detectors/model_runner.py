@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from __future__ import annotations
 
 import logging
@@ -70,6 +70,17 @@ def run_model_scoring(dataset: CrashDataset, config: CDQAIConfig, logger: loggin
     sw = float(ensemble_cfg.get("structured_weight", 0.5))
     nw = float(ensemble_cfg.get("narrative_weight", 0.5))
     results = combine_model_scores(results, sw, nw)
+    if "NarrativeAnalysis" in results:
+        dataset.narrative_analysis = results[[mfn, "NarrativeAnalysis"]].copy()
+        import json
+        coverage = [json.loads(value) for value in results["NarrativeAnalysis"]]
+        metadata["narrative_coverage"] = {
+            "algorithm": "fulltext-weighted-mean-max-v1",
+            "complete_records": sum(a.get("status") == "complete" for a in coverage),
+            "total_chunks": sum(a.get("chunks", 0) for a in coverage),
+            "sentence_review_complete": sum(a.get("review", {}).get("status") == "complete" for a in coverage),
+            "sentence_review_limited": sum(a.get("review", {}).get("status") == "limited" for a in coverage),
+        }
     metadata.update(structured_weight=sw, narrative_weight=nw, records_scored=len(results),
                     narratives_not_scored=int(results["NarrativeScore_pct"].isna().sum()),
                     context=dataset.context_summary)

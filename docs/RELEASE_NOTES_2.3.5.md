@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.5 -->
+<!-- CDQAI file version: 2.3.6 -->
 # CDQAI 2.3.5 - Reliable Yellow Narrative Highlights
 
 - Builds on the published 2.3.2 release, retaining analyst guidance, selected-crash PDF reports, severity-aware prioritization, and recorded rule/model narrative spans.

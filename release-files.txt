@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 .gitignore
 AGENTS.md
 AUTHORS.md
@@ -133,3 +133,12 @@ docs/ANALYST_GUIDANCE.md
 
 tests/test_dashboard_highlight_pipeline.py
 docs/RELEASE_NOTES_2.3.5.md
+release-exclusions.txt
+docs/RELEASE_PREFLIGHT.md
+docs/VERSION_AUDIT.md
+tools/verify_release.py
+tests/test_verification_cleanup.py
+tests/test_dashboard_browser.py
+cdqai/detectors/narrative_chunks.py
+tests/test_full_narratives.py
+docs/RELEASE_NOTES_2.3.6.md

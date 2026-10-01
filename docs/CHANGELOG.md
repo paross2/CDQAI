@@ -1,5 +1,13 @@
-<!-- CDQAI file version: 2.3.5 -->
+<!-- CDQAI file version: 2.3.6 -->
 # CDQAI Changelog
+
+## 2.3.6 - AI Powered Crash Data Anomaly Detector
+
+- Scores complete narratives with overlapping token-budgeted chunks and combined weighted-mean/maximum features; no silent fallback to truncated inputs.
+- Rebuilds embedding caches when ordered record/text hashes, model weights, tokenizer, software stack, or chunk settings change. Cache integrity checks reject older or mismatched arrays.
+- Re-encodes the full remaining narrative during sentence-removal review; preserves original offsets for highlights and reports complete/limited/unavailable review separately.
+- Exports coverage in model scores, finding evidence, dashboard companion data, and manifest summary. Keeps duplicate-ID previews aligned with their original rows.
+- Includes the pending dashboard Expand all/Collapse all controls, accurate highlight guidance, release preflight audit, and automatic temporary-workspace cleanup.
 
 ## 2.3.5 - Reliable Yellow Narrative Highlights
 

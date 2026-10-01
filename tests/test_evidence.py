@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 import pytest
 
 from cdqai.evidence import Evidence, EvidenceBundle, Severity

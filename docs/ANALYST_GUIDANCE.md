@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.5 -->
+<!-- CDQAI file version: 2.3.6 -->
 # Analyst breadcrumbs and severity-aware review priority
 
 The deterministic finding engine remains step 6. Step 7 now adds recorded triggers,
@@ -19,7 +19,7 @@ It cannot change a finding, score, rank, or deterministic explanation. A draft i
 unverified: valid references and structured output do not prove its prose is correct.
 Analysts must compare it with the recorded evidence.
 
-Version 2.3.2 asks Llama for short conversational explanations:
+Version 2.3.6 asks Llama for short conversational explanations:
 what stood out, what the evidence cannot establish, and a useful next check. Related
 base signals are combined rather than repeating one percentile per paragraph.
 Derived ensemble summaries are omitted from the prompt when base facts exist, while

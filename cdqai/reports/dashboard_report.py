@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from __future__ import annotations
 
 import html
@@ -52,7 +52,23 @@ def _build_narrative_lookup(dataset: CrashDataset, mfn_field: str, narrative_fie
     return lookup
 
 
-def _narrative_payload(text: object, terms: object = "", recorded_spans=None, narrative_model=True) -> dict[str, object]:
+def _analysis_summary(analysis, narrative):
+    if not analysis or analysis.get("narrative_sha256") != hashlib.sha256(narrative.encode("utf-8")).hexdigest():
+        return "Full-text model coverage unavailable for this displayed narrative."
+    if analysis.get("status") != "complete":
+        return "Full-text model analysis not completed for this narrative."
+    review = analysis.get("review", {})
+    status = review.get("status", "unavailable")
+    if status in {"complete", "limited"}:
+        explanation = f"Sentence review: {review.get('sentences_tested', 0)} of {review.get('sentences_total', 0)} sentences tested ({status})."
+    else:
+        explanation = {"disabled": "Sentence review disabled.", "not_selected": "Sentence review not selected under the review limit or score threshold.",
+                       "input_score_mismatch": "Sentence review unavailable: re-encoded score did not match.",
+                       "insufficient_sentences": "Sentence review unavailable: fewer than two sentences."}.get(status, "Sentence review unavailable.")
+    return f"Full narrative processed: {analysis.get('tokens', 0)} tokens across {analysis.get('chunks', 0)} chunks. " + explanation
+
+
+def _narrative_payload(text: object, terms: object = "", recorded_spans=None, narrative_model=True, analysis=None) -> dict[str, object]:
     """Create a portable, non-HTML narrative evidence payload."""
     narrative = "" if pd.isna(text) else str(text)
     term_list = sorted({x.strip() for x in str(terms or "").split(";") if x.strip()}, key=str.lower)
@@ -83,11 +99,15 @@ def _narrative_payload(text: object, terms: object = "", recorded_spans=None, na
                    if narrative_model else "This finding has no recorded narrative-segment trigger. Review its structured or rule evidence.")
     if recorded_spans is None and not non_overlapping:
         explanation = "The narrative was statistically unusual as a whole. No individual word or sentence is presented as causal."
+    if recorded_spans and not non_overlapping:
+        explanation = "Recorded highlights do not match this complete narrative. Compare the source report and recorded evidence; no unsupported passages are highlighted."
     return {
         "narrativeFull": narrative,
         "narrativePreview": narrative[:500],
         "evidenceSpans": non_overlapping,
         "evidenceMethod": method,
+        "analysisCoverage": _analysis_summary(analysis, narrative),
+        "analysis": analysis or {},
         "evidenceExplanation": ("Yellow highlighting identifies language used by a deterministic rule." if method == "direct_rule_phrase" else explanation),
     }
 
@@ -242,7 +262,7 @@ def build_how_cdqai_works_html(config: CDQAIConfig) -> str:
 <p>The configured structured-model contamination is <strong>{_pct(s_contamination)}%</strong>. Contamination sets the model decision threshold; it is not the final analyst-evidence threshold.</p>
 
 <h3>4. Score crash narratives</h3>
-<p>Available narratives are represented with semantic embeddings using <code>{html.escape(embedding_model)}</code>. Embeddings place narratives with similar meanings near one another. Blank narratives are excluded from narrative Isolation Forest fitting, scoring, and percentile ranking. Fewer than two available narratives produces no narrative score.</p>
+<p>Available narratives are represented with semantic embeddings using <code>{html.escape(embedding_model)}</code>. Every nonblank narrative is split into overlapping chunks within the model token budget. All chunks are encoded; a token-weighted mean and elementwise maximum form the full-text feature vector. Coverage is reported separately from bounded sentence-removal review. Blank narratives are excluded from narrative Isolation Forest fitting, scoring, and percentile ranking. Fewer than two available narratives produces no narrative score.</p>
 <p>A narrative may score highly because it describes a rare event, combines unusual concepts, uses atypical language or structure, or is otherwise distant from common narrative patterns. The model does not rely on a fixed suspicious-word list. Scores are percentile-ranked as <code>NarrativeScore_pct</code>. The configured narrative-model contamination is <strong>{_pct(n_contamination)}%</strong>.</p>
 
 <h3>5. Convert model scores into evidence</h3>
@@ -303,16 +323,25 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
     narrative_field = config.raw["fields"]["narrative_text_field"]
     narrative_lookup = _build_narrative_lookup(dataset, mfn_field, narrative_field)
     spans_by_mfn = {}
+    analysis_by_mfn = {}
     model_mfns = set()
     for item in evidence.items:
         key = _canonical_mfn(item.mfn)
         spans_by_mfn.setdefault(key, []).extend(item.supporting_values.get("narrative_spans", []))
         if item.source == "MODEL_NARRATIVE":
             model_mfns.add(key)
+            analysis_by_mfn.setdefault(key, []).append(item.supporting_values.get("narrative_analysis", {}))
+    analysis_frame = getattr(dataset, "narrative_analysis", None)
+    if analysis_frame is not None:
+        for mfn, value in zip(analysis_frame[mfn_field], analysis_frame["NarrativeAnalysis"]):
+            analysis_by_mfn.setdefault(_canonical_mfn(mfn), []).append(json.loads(value))
+    def matching_analysis(mfn):
+        digest = hashlib.sha256(narrative_lookup.get(mfn, "").encode("utf-8")).hexdigest()
+        return next((a for a in analysis_by_mfn.get(mfn, []) if a.get("narrative_sha256") == digest), None)
     finding_mfns = {_canonical_mfn(x.mfn) for x in findings if _canonical_mfn(x.mfn)}
     narrative_payload = {
         mfn: _narrative_payload(narrative_lookup.get(mfn, ""),
-            recorded_spans=spans_by_mfn.get(mfn, []), narrative_model=mfn in model_mfns)
+            recorded_spans=spans_by_mfn.get(mfn, []), narrative_model=mfn in model_mfns, analysis=matching_analysis(mfn))
         for mfn in sorted(finding_mfns)
     }
     missing_flagged = [mfn for mfn, value in narrative_payload.items() if not str(value["narrativeFull"]).strip()]
@@ -345,6 +374,8 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
             "NarrativeEvidenceSpans": json.dumps(value["evidenceSpans"], ensure_ascii=False),
             "NarrativeEvidenceMethod": value["evidenceMethod"],
             "NarrativeEvidenceExplanation": value["evidenceExplanation"],
+            "NarrativeAnalysisCoverage": value["analysisCoverage"],
+            "NarrativeAnalysis": json.dumps(value["analysis"]),
         })
     evidence_frame = pd.DataFrame(evidence_rows)
     evidence_path = config.outputs_dir / outputs.get("finding_evidence_file", "finding_evidence.parquet")
@@ -378,9 +409,9 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
 <div class="detail-wide"><h3>AI-Assisted Development</h3><p>{html.escape(AI_ATTRIBUTION)}</p></div><div class="detail-wide"><h3>Funding</h3><p>{html.escape(FUNDING_ACKNOWLEDGMENT)}</p></div><div><h3>Licensing</h3><p>Software: {html.escape(SOFTWARE_LICENSE)}<br>Documentation: {html.escape(DOCUMENTATION_LICENSE)}</p></div><div class="detail-wide"><h3>Disclaimer</h3><p>{html.escape(DISCLAIMER)}</p></div></div></div>'''
 
     document = f'''<!doctype html><html><head><meta charset="utf-8"><title>CDQAI {config.version}</title>
-<style>*{{box-sizing:border-box}}html,body{{max-width:100%;overflow-x:hidden}}body{{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a;line-height:1.5}}header{{background:#17365d;color:white;padding:clamp(24px,4vw,48px) 4vw}}main{{width:94%;max-width:1800px;margin:auto;padding:clamp(16px,2.5vw,36px) 0}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:14px}}.card,section,.accordion{{min-width:0;background:white;border-radius:10px;padding:clamp(16px,2vw,24px);box-shadow:0 1px 5px #ccd2d8}}.card strong{{display:block;font-size:30px}}.card span{{color:#4d5966}}section{{margin-top:22px}}section h3{{margin-top:28px;color:#17365d}}.table-container{{width:100%;max-width:100%;overflow-x:auto;border:1px solid #d8dee5;border-radius:8px}}table.data{{border-collapse:collapse;width:100%;font-size:13px}}.data th,.data td{{border-bottom:1px solid #ddd;padding:9px;text-align:left;vertical-align:top;overflow-wrap:anywhere}}.data th{{background:#e9eef4;position:sticky;top:0;z-index:2;white-space:nowrap;cursor:pointer}}.findings-table{{min-width:980px}}.accordion{{min-width:0;background:white;border-radius:10px;box-shadow:0 1px 5px #ccd2d8}}.accordion>summary{{list-style:none;cursor:pointer;padding:clamp(16px,2vw,24px);font-size:1.5rem;font-weight:700;color:#17365d;display:flex;align-items:center;justify-content:space-between}}.accordion>summary::-webkit-details-marker{{display:none}}.accordion>summary::after{{content:"+";font-size:1.6rem}}.accordion[open]>summary::after{{content:"−"}}.accordion-content{{padding:0 clamp(16px,2vw,24px) clamp(16px,2vw,24px)}}.finding-filters{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin:0 0 14px;padding:14px;background:#f5f8fb;border:1px solid #d8dee5;border-radius:8px}}.finding-filters label{{display:flex;flex-direction:column;font-size:12px;font-weight:600;color:#34495e;gap:4px}}.finding-filters input,.finding-filters select{{width:100%;padding:8px;border:1px solid #aeb9c4;border-radius:5px;background:white}}.clear-filters{{padding:9px 14px;border:1px solid #7890aa;border-radius:5px;background:white;cursor:pointer}}.filter-count{{font-weight:600;color:#4d5966;align-self:center}}.expand-button{{width:28px;height:28px;border:1px solid #7890aa;background:white;border-radius:5px;font-size:18px;cursor:pointer}}.finding-detail td{{background:#f5f8fb;padding:16px}}.detail-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}}.detail-wide{{grid-column:1/-1}}.detail-grid h4{{margin:0 0 4px;color:#17365d}}.detail-grid p{{margin:0}}.priority{{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:600}}.priority-critical{{background:#fde7e7;color:#8a1c1c}}.priority-high{{background:#fff0d9;color:#744600}}.priority-medium{{background:#e8f0fb;color:#244d7d}}.priority-low{{background:#edf1f4;color:#43515e}}.note{{border-left:5px solid #17365d;padding:12px;background:#eef4fa}}.formula{{border-left:4px solid #66788a;background:#f6f8fa;padding:10px 12px;overflow-wrap:anywhere}}.narrative-evidence{{white-space:pre-wrap;background:#fff;border:1px solid #d8dee5;border-radius:7px;padding:14px;max-height:300px;overflow:auto}}mark{{background:#ffeb3b;color:#17202a;padding:1px 2px;border-radius:2px}}.attribution-note{{margin-top:8px!important;font-size:12px;color:#596673}}.evidence-label{{display:inline-block;margin-bottom:8px;padding:4px 8px;border-radius:999px;background:#e8f0fb;color:#244d7d;font-weight:700;font-size:12px}}.review-instruction{{margin-top:10px!important;padding:10px 12px;background:#eef4fa;border-left:4px solid #17365d}}.missing-narrative{{padding:12px;background:#fff3cd;border-left:4px solid #9a6700}}.loading-note{{color:#596673;font-style:italic}}footer{{padding:30px 4vw;background:#17365d;color:white;margin-top:30px}}code{{background:#eef1f4;padding:2px 5px}}@media(max-width:720px){{.detail-grid{{grid-template-columns:1fr}}.detail-wide{{grid-column:auto}}}}@media print{{.table-container{{overflow:visible}}.finding-detail[hidden]{{display:table-row}}}}</style></head><body>
+<style>*{{box-sizing:border-box}}html,body{{max-width:100%;overflow-x:hidden}}body{{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#f4f6f8;color:#17202a;line-height:1.5}}header{{background:#17365d;color:white;padding:clamp(24px,4vw,48px) 4vw}}main{{width:94%;max-width:1800px;margin:auto;padding:clamp(16px,2.5vw,36px) 0}}.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:14px}}.card,section,.accordion{{min-width:0;background:white;border-radius:10px;padding:clamp(16px,2vw,24px);box-shadow:0 1px 5px #ccd2d8}}.card strong{{display:block;font-size:30px}}.card span{{color:#4d5966}}section{{margin-top:22px}}section h3{{margin-top:28px;color:#17365d}}.table-container{{width:100%;max-width:100%;overflow-x:auto;border:1px solid #d8dee5;border-radius:8px}}table.data{{border-collapse:collapse;width:100%;font-size:13px}}.data th,.data td{{border-bottom:1px solid #ddd;padding:9px;text-align:left;vertical-align:top;overflow-wrap:anywhere}}.data th{{background:#e9eef4;position:sticky;top:0;z-index:2;white-space:nowrap;cursor:pointer}}.findings-table{{min-width:980px}}.accordion{{min-width:0;background:white;border-radius:10px;box-shadow:0 1px 5px #ccd2d8}}.accordion>summary{{list-style:none;cursor:pointer;padding:clamp(16px,2vw,24px);font-size:1.5rem;font-weight:700;color:#17365d;display:flex;align-items:center;justify-content:space-between}}.accordion>summary::-webkit-details-marker{{display:none}}.accordion>summary::after{{content:"+";font-size:1.6rem}}.accordion[open]>summary::after{{content:"−"}}.accordion-content{{padding:0 clamp(16px,2vw,24px) clamp(16px,2vw,24px)}}.finding-filters{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin:0 0 14px;padding:14px;background:#f5f8fb;border:1px solid #d8dee5;border-radius:8px}}.finding-filters label{{display:flex;flex-direction:column;font-size:12px;font-weight:600;color:#34495e;gap:4px}}.finding-filters input,.finding-filters select{{width:100%;padding:8px;border:1px solid #aeb9c4;border-radius:5px;background:white}}.clear-filters{{padding:9px 14px;border:1px solid #7890aa;border-radius:5px;background:white;cursor:pointer}}.filter-count{{font-weight:600;color:#4d5966;align-self:center}}.expand-button{{width:28px;height:28px;border:1px solid #7890aa;background:white;border-radius:5px;font-size:18px;cursor:pointer}}.finding-detail td{{background:#f5f8fb;padding:16px}}.detail-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}}.detail-wide{{grid-column:1/-1}}.detail-grid h4{{margin:0 0 4px;color:#17365d}}.detail-grid p{{margin:0}}.priority{{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:600}}.priority-critical{{background:#fde7e7;color:#8a1c1c}}.priority-high{{background:#fff0d9;color:#744600}}.priority-medium{{background:#e8f0fb;color:#244d7d}}.priority-low{{background:#edf1f4;color:#43515e}}.note{{border-left:5px solid #17365d;padding:12px;background:#eef4fa}}.formula{{border-left:4px solid #66788a;background:#f6f8fa;padding:10px 12px;overflow-wrap:anywhere}}.narrative-evidence{{position:relative;white-space:pre-wrap;background:#fff;border:1px solid #d8dee5;border-radius:7px;padding:14px;max-height:300px;overflow:auto}}mark{{background:#ffeb3b;color:#17202a;padding:1px 2px;border-radius:2px}}.attribution-note{{margin-top:8px!important;font-size:12px;color:#596673}}.evidence-label{{display:inline-block;margin-bottom:8px;padding:4px 8px;border-radius:999px;background:#e8f0fb;color:#244d7d;font-weight:700;font-size:12px}}.review-instruction{{margin-top:10px!important;padding:10px 12px;background:#eef4fa;border-left:4px solid #17365d}}.missing-narrative{{padding:12px;background:#fff3cd;border-left:4px solid #9a6700}}.loading-note{{color:#596673;font-style:italic}}footer{{padding:30px 4vw;background:#17365d;color:white;margin-top:30px}}code{{background:#eef1f4;padding:2px 5px}}@media(max-width:720px){{.detail-grid{{grid-template-columns:1fr}}.detail-wide{{grid-column:auto}}}}@media print{{.table-container{{overflow:visible}}.finding-detail[hidden]{{display:table-row}}}}</style></head><body>
 <header><h1>Crash Data Quality Artificial Intelligence (CDQAI)</h1><h2>Evidence and Review Dashboard — Version {html.escape(config.version)}</h2><p>CDQAI combines deterministic rules and machine-learning anomaly detection to prioritize Kentucky crash records for human review.</p></header>
-<main><div class="note"><strong>Interpretation:</strong> CDQAI reports observable evidence and statistical unusualness. A finding is not a determination that a record is wrong. Analysts must review the underlying record and applicable business rules.</div>
+<main><nav class="finding-actions" aria-label="Finding expansion"><button type="button" id="expand-all-findings" class="clear-filters">Expand all</button> <button type="button" id="collapse-all-findings" class="clear-filters">Collapse all</button><span> Applies to findings shown by the current filters.</span></nav><div class="note"><strong>Interpretation:</strong> CDQAI reports observable evidence and statistical unusualness. A finding is not a determination that a record is wrong. Analysts must review the underlying record and applicable business rules.</div>
 <section><h2>About This Run</h2><div class="cards">{cards}</div></section>
 {REVIEW_CONTROLS}
 <details class="accordion"><summary>How CDQAI Works</summary><div class="accordion-content">{explanation}</div></details>
@@ -391,8 +422,36 @@ def write_dashboard(dataset: CrashDataset, evidence: EvidenceCollection, finding
 <footer><strong>Crash Data Quality Artificial Intelligence (CDQAI)</strong><br>Version {html.escape(config.version)} · Kentucky Transportation Center · University of Kentucky<br>Generated: {generated}</footer><script src="{html.escape(str(narrative_data_name))}"></script><script>
 function findingGroups(table){{const groups=[];for(const row of [...table.tBodies[0].rows])if(row.classList.contains('finding-summary'))groups.push([row,row.nextElementSibling]);return groups;}}
 function escapeHtml(value){{return String(value??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));}}
-function renderNarrative(mfn,slot){{const item=(window.CDQAINarratives||{{}})[mfn];if(!item||!String(item.narrativeFull||'').trim()){{slot.innerHTML='<p class="missing-narrative"><strong>Narrative unavailable.</strong> This record cannot be fully spot-checked until the source narrative is restored or rejoined.</p>';return;}}const text=Array.from(String(item.narrativeFull)),spans=[...(item.evidenceSpans||[])].sort((a,b)=>a.start-b.start);let cursor=0,body='';for(const span of spans){{const start=Math.max(cursor,Number(span.start)||0),end=Math.max(start,Number(span.end)||start);body+=escapeHtml(text.slice(cursor,start).join(''));body+='<mark title="'+escapeHtml(span.reason||'Highlighted evidence')+'">'+escapeHtml(text.slice(start,end).join(''))+'</mark>';cursor=end;}}body+=escapeHtml(text.slice(cursor).join(''));const label=({{'direct_rule_phrase':'Rule-triggered language','sentence_removal_sensitivity':'Model sentence sensitivity','mixed_rule_and_sensitivity':'Rule and model sensitivity','no_segment_evidence':'No narrative-segment trigger'}})[item.evidenceMethod]||'Narrative model: no supported segment highlight';slot.innerHTML='<div class="evidence-label">'+escapeHtml(label)+'</div><div class="narrative-evidence">'+body+'</div><p class="attribution-note">'+escapeHtml(item.evidenceExplanation||'')+'</p><p class="review-instruction"><strong>What to check:</strong> Compare the highlighted narrative language and coded crash fields against the original report and any available EMS or hospital information.</p>';}}
-for(const b of document.querySelectorAll('.expand-button')){{b.addEventListener('click',()=>{{const r=document.getElementById(b.getAttribute('aria-controls'));const opening=r.hidden;r.hidden=!opening;b.textContent=opening?'−':'+';b.setAttribute('aria-expanded',String(opening));if(opening){{const slot=r.querySelector('.narrative-slot');if(slot&&!slot.dataset.loaded){{renderNarrative(b.dataset.mfn,slot);slot.dataset.loaded='true';}}}}}});}}
+function focusNarrativeEvidence(slot) {{
+ const panel=slot.querySelector('.narrative-evidence'), mark=panel?.querySelector('mark');
+ if(mark) panel.scrollTop=Math.max(0,mark.offsetTop-24);
+}}
+function renderNarrative(mfn,slot) {{
+ if(!window.CDQAINarratives) {{slot.innerHTML='<p class="missing-narrative"><strong>Narrative companion unavailable.</strong> Keep dashboard.html and dashboard_narratives.js from the same run together, then reload this page.</p>';return;}}
+ const item=window.CDQAINarratives[mfn];
+ if(!item||!String(item.narrativeFull||'').trim()) {{slot.innerHTML='<p class="missing-narrative"><strong>Narrative unavailable.</strong> Restore or rejoin the source narrative before spot-checking this record.</p>';return;}}
+ const text=Array.from(String(item.narrativeFull)),spans=[...(item.evidenceSpans||[])].filter(s=>Number.isInteger(s.start)&&Number.isInteger(s.end)&&s.start>=0&&s.end>s.start&&s.end<=text.length&&text.slice(s.start,s.end).join('')===s.text).sort((a,b)=>a.start-b.start);
+ let cursor=0,body='',count=0;
+ for(const span of spans) {{if(span.start<cursor)continue;body+=escapeHtml(text.slice(cursor,span.start).join(''));body+='<mark title="'+escapeHtml(span.reason||'Highlighted evidence')+'">'+escapeHtml(text.slice(span.start,span.end).join(''))+'</mark>';cursor=span.end;count++;}}
+ body+=escapeHtml(text.slice(cursor).join(''));
+ const label=count?count+' yellow highlight'+(count===1?'':'s'):'No supported text highlight';
+ const method=({{'direct_rule_phrase':'Rule-triggered language','sentence_removal_sensitivity':'Model sentence sensitivity','mixed_rule_and_sensitivity':'Rule and model sensitivity'}})[item.evidenceMethod]||'';
+ const instruction=count?'Compare the highlighted passages with the coded fields and original report. Model sensitivity is a review aid, not proof of an error.':'Review the recorded triggers, coded fields, and complete narrative against the original report. No specific passage has been identified for highlighting in this finding.';
+ slot.innerHTML='<div class="evidence-label">'+escapeHtml(label+(count&&method?' - '+method:''))+'</div><p class="analysis-coverage">'+escapeHtml(item.analysisCoverage||'Full-text model coverage unavailable for this displayed narrative.')+'</p><div class="narrative-evidence">'+body+'</div><p class="attribution-note">'+escapeHtml(item.evidenceExplanation||'')+'</p><p class="review-instruction"><strong>What to check:</strong> '+instruction+'</p>';
+ focusNarrativeEvidence(slot);
+}}
+function setFindingExpanded(button,opening) {{
+ const row=document.getElementById(button.getAttribute('aria-controls'));
+ row.hidden=!opening;button.textContent=opening?'-':'+';button.setAttribute('aria-expanded',String(opening));
+ if(opening) {{const slot=row.querySelector('.narrative-slot');if(slot&&!slot.dataset.loaded) {{renderNarrative(button.dataset.mfn,slot);slot.dataset.loaded='true';}}if(slot)focusNarrativeEvidence(slot);}}
+}}
+for(const button of document.querySelectorAll('.expand-button')) button.addEventListener('click',()=>setFindingExpanded(button,button.getAttribute('aria-expanded')!=='true'));
+document.getElementById('expand-all-findings').addEventListener('click',()=>{{
+ for(const button of document.querySelectorAll('.expand-button')) {{if(button.closest('.finding-summary').hidden)continue;const section=button.closest('details');if(section)section.open=true;setFindingExpanded(button,true);}}
+}});
+document.getElementById('collapse-all-findings').addEventListener('click',()=>{{
+ for(const button of document.querySelectorAll('.expand-button'))setFindingExpanded(button,false);
+}});
 for(const table of document.querySelectorAll('table.sortable')){{[...table.querySelectorAll('thead th')].forEach((heading,index)=>{{if(!index)return;heading.addEventListener('click',()=>{{const groups=findingGroups(table);const ascending=heading.dataset.direction!=='asc';table.querySelectorAll('th').forEach(x=>delete x.dataset.direction);heading.dataset.direction=ascending?'asc':'desc';groups.sort((x,y)=>{{const A=x[0].cells[index],B=y[0].cells[index],av=A.dataset.sortValue??A.textContent.trim(),bv=B.dataset.sortValue??B.textContent.trim(),an=Number(av),bn=Number(bv);const comparison=!Number.isNaN(an)&&!Number.isNaN(bn)?an-bn:av.localeCompare(bv,undefined,{{numeric:true}});return ascending?comparison:-comparison;}});for(const group of groups)for(const row of group)table.tBodies[0].appendChild(row);}});}});}}
 for(const controls of document.querySelectorAll('.finding-filters')){{const table=document.getElementById(controls.dataset.table);const search=controls.querySelector('.filter-search'),issue=controls.querySelector('.filter-issue'),strength=controls.querySelector('.filter-strength'),analyst=controls.querySelector('.filter-analyst'),narrative=controls.querySelector('.filter-narrative'),minimum=controls.querySelector('.filter-confidence-min'),maximum=controls.querySelector('.filter-confidence-max'),count=controls.querySelector('.filter-count');const apply=()=>{{let visible=0;for(const [summary,detail] of findingGroups(table)){{const query=search.value.trim().toLowerCase(),confidence=Number(summary.dataset.confidence||0);const show=(!query||summary.textContent.toLowerCase().includes(query))&&(!issue.value||summary.dataset.primaryIssue===issue.value)&&(!strength.value||summary.dataset.evidenceStrength===strength.value)&&(!analyst.value||summary.dataset.analystPriority===analyst.value)&&(!narrative.value||summary.dataset.narrativeStatus===narrative.value)&&(!minimum.value||confidence>=Number(minimum.value))&&(!maximum.value||confidence<=Number(maximum.value));summary.hidden=!show;if(detail)detail.hidden=true;const button=summary.querySelector('.expand-button');if(button){{button.textContent='+';button.setAttribute('aria-expanded','false');}}if(show)visible++;}}count.textContent=`${{visible.toLocaleString()}} finding${{visible===1?'':'s'}} shown`;}};for(const input of controls.querySelectorAll('input,select'))input.addEventListener('input',apply);controls.querySelector('.clear-filters').addEventListener('click',()=>{{for(const input of controls.querySelectorAll('input,select'))input.value='';apply();}});apply();}}
 {REVIEW_SCRIPT}

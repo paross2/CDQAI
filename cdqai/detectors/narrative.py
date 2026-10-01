@@ -1,7 +1,8 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from __future__ import annotations
 import logging
 import json
+import hashlib
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import IsolationForest
@@ -14,9 +15,15 @@ class NarrativeAnomalyDetector:
     def score(self, df: pd.DataFrame, refresh_cache: bool=False) -> pd.DataFrame:
         cfg=self.config.raw["models"]["narrative"]; mfn=self.config.raw["fields"]["normalized_mfn_field"]
         text_field = self.config.raw["fields"]["narrative_text_field"]
+        texts = df[text_field].fillna("").astype(str).tolist()
         available = df[text_field].fillna("").astype(str).str.strip().ne("").to_numpy()
         result = pd.DataFrame({mfn: df[mfn].to_numpy(), "NarrativeScore": np.nan,
                                "NarrativeScore_pct": np.nan, "NarrativeScored": False})
+        analyses = [{"narrative_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                     "status": "not_scored" if text.strip() else "missing",
+                     "review": {"status": "not_scored"}} for text in texts]
+        result["NarrativeReviewSpans"] = "[]"
+        result["NarrativeAnalysis"] = [json.dumps(a) for a in analyses]
         if available.sum() < 2:
             self.logger.info("Narrative model skipped: fewer than two nonblank narratives.")
             return result
@@ -28,8 +35,12 @@ class NarrativeAnomalyDetector:
         result.loc[available, "NarrativeScore"] = raw
         result.loc[available, "NarrativeScore_pct"] = pct
         result.loc[available, "NarrativeScored"] = True
-        result["NarrativeReviewSpans"] = "[]"
         review = cfg.get("sentence_review", {})
+        coverage = self.embedding_manager.coverage
+        for index, analysis in enumerate(analyses):
+            if available[index]:
+                analysis.update(coverage[index] if len(coverage) == len(analyses) else {"status": "unverified"})
+                analysis["review"] = {"status": "not_selected" if review.get("enabled", False) else "disabled"}
         if review.get("enabled", False):
             from cdqai.detectors.narrative_spans import sentence_sensitivity
             limit = int(review.get("max_records", 20))
@@ -38,12 +49,17 @@ class NarrativeAnomalyDetector:
             threshold = float(self.config.raw.get("model_evidence", {}).get("narrative_percentile", 99))
             chosen = result[result.NarrativeScore_pct >= threshold].nlargest(limit, "NarrativeScore_pct")
             for idx in chosen.index:
-                text = str(df.iloc[idx][text_field])
+                text = texts[idx]
                 try:
-                    spans = sentence_sensitivity(text, self.embedding_manager.encode_review_texts,
-                                                 model, float(result.at[idx, "NarrativeScore"]))
+                    details = sentence_sensitivity(text, self.embedding_manager.encode_review_texts,
+                                                 model, float(result.at[idx, "NarrativeScore"]),
+                                                 max_sentences=int(review.get("max_sentences", 12)), return_details=True)
+                    spans = details.pop("spans")
+                    analyses[idx]["review"] = details
                 except (OSError, RuntimeError, ValueError):
                     self.logger.warning("Optional sentence review unavailable; narrative scores retained.")
-                    break
+                    analyses[idx]["review"] = {"status": "unavailable"}
+                    continue
                 result.at[idx, "NarrativeReviewSpans"] = json.dumps(spans)
+        result["NarrativeAnalysis"] = [json.dumps(a) for a in analyses]
         return result

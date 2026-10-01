@@ -1,5 +1,7 @@
-<!-- CDQAI file version: 2.3.5 -->
+<!-- CDQAI file version: 2.3.6 -->
 # Publishing local CDQAI changes
+
+Complete [the release preflight checklist](docs/RELEASE_PREFLIGHT.md) before publishing.
 
 ## Keep file versions synchronized
 
@@ -64,7 +66,10 @@ artifacts even if filenames sound like summaries. Review new binary files separa
 ordinary text diffs cannot establish that they are sanitized. The versioned county
 DVMT workbooks are documented context data, not a precedent for adding crash exports.
 
-After tests pass and the staged diff is reviewed, commit with a descriptive message.
+After tests pass and the staged diff is reviewed, use this release commit and GitHub
+release title format: `Release CDQAI X.Y.Z: AI Powered Crash Data Anomaly Detector`.
+For 2.3.6, use `Release CDQAI 2.3.6: AI Powered Crash Data Anomaly Detector`.
+Keep incremental feature descriptions in the release notes rather than the title.
 Verify `git remote -v` locally and publish to the intended `paross2/CDQAI` remote and
 branch. Do not reinitialize an existing repository or create a release tag for routine
 development changes. Do not use force-add to bypass the private-file exclusions.

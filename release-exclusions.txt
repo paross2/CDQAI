@@ -1,0 +1,47 @@
+# CDQAI file version: 2.3.6
+# Explicit historical documents and external data; never rewrite their contents.
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT1997.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT1998.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT1999.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2000.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2001.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2002.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2003.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2004.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2005.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2006.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2007.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2008.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2009.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2010.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2011.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2012.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2013.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2014.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2015.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2016.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2017.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2018.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2019.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2020.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2021.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2022.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2023.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2024.xlsx
+context/kentucky_dvmt/raw/Mileage and Daily Vehicle Miles Traveled - DVMT2025.xlsx
+docs/DEVELOPMENT_REVIEW.md
+docs/RELEASE_NOTES_2.0.0.md
+docs/RELEASE_NOTES_2.0.1.md
+docs/RELEASE_NOTES_2.0.2.md
+docs/RELEASE_NOTES_2.1.0.md
+docs/RELEASE_NOTES_2.1.1.md
+docs/RELEASE_NOTES_2.1.2.md
+docs/RELEASE_NOTES_2.2.0.md
+docs/RELEASE_NOTES_2.2.1.md
+docs/RELEASE_NOTES_2.2.2.md
+docs/RELEASE_NOTES_2.2.3.md
+docs/RELEASE_NOTES_2.2.4.md
+docs/RELEASE_NOTES_2.2.5.md
+docs/VERSION_1_5_0.md
+docs/history/INSTALL_VERSION_2.0.1.txt
+docs/history/INSTALL_VERSION_2.0.txt

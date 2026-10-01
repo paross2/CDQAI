@@ -1,15 +1,37 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from pathlib import Path
 
 import pytest
 
 from tools.release_version import release_paths, synchronize
+from tools.release_version import inventory_gaps, synchronized_text
 
 
 def test_current_release_files_are_synchronized():
     root = Path(__file__).resolve().parents[1]
     assert synchronize(root, check=True) == []
     assert not list(root.glob("Release_[0-9]*.bat"))
+
+
+def test_git_inventory_detects_omissions_without_reading_them(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    (tmp_path / "VERSION").write_text("2.3.5\n")
+    (tmp_path / "release-files.txt").write_text("VERSION\n")
+    (tmp_path / "release-exclusions.txt").write_text("# archived data\nexternal.xlsx\n")
+    monkeypatch.setattr("tools.release_version.subprocess.run", lambda *a, **kw:
+                        SimpleNamespace(stdout="VERSION\0external.xlsx\0forgotten.py\0"))
+    assert inventory_gaps(tmp_path) == ["forgotten.py"]
+    (tmp_path / "release-exclusions.txt").write_text("VERSION\nexternal.xlsx\nforgotten.py\n")
+    assert inventory_gaps(tmp_path) == ["VERSION"]
+
+
+def test_current_guides_and_readme_link_update_but_history_does_not():
+    for path in ("docs/ANALYST_GUIDANCE.md", "docs/NARRATIVE_HIGHLIGHTS.md"):
+        assert "Version 9.8.7" in synchronized_text(path, "Version 1.2.3\n", "1.2.3", "9.8.7")
+    result = synchronized_text("README.md", "docs/RELEASE_NOTES_1.2.3.md", "1.2.3", "9.8.7")
+    assert "docs/RELEASE_NOTES_9.8.7.md" in result
+    result = synchronized_text("docs/RELEASE_NOTES_1.2.3.md", "Version 1.2.3\n", "1.2.3", "9.8.7")
+    assert result.endswith("Version 1.2.3\n")
 
 
 def test_release_update_is_repeatable_and_preserves_history(tmp_path):

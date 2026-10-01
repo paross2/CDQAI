@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from copy import deepcopy
 import logging
 from types import SimpleNamespace

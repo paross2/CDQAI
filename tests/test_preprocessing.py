@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 import pandas as pd
 from cdqai.data.preprocessing import normalize_mfn
 

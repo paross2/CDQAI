@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from __future__ import annotations
 
 import pandas as pd
@@ -67,7 +67,8 @@ def build_model_evidence(scores: pd.DataFrame, config: CDQAIConfig) -> EvidenceC
                 min(n / 100.0, 1.0),
                 "The narrative is statistically unusual compared with other crash narratives and warrants review.",
                 "MODEL_NARRATIVE", supporting_fields=["NarrativeScore_pct"], supporting_values={
-                    "percentile": round(n, 4), "narrative_spans": json.loads(row.get("NarrativeReviewSpans", "[]"))}))
+                    "percentile": round(n, 4), "narrative_spans": json.loads(row.get("NarrativeReviewSpans", "[]")),
+                    "narrative_analysis": json.loads(row.get("NarrativeAnalysis", "{}"))}))
         if e >= ensemble_t:
             items.append(Evidence(mfn, RecordType.REC01, TrafficRecordSystem.CRASH,
                 QualityCharacteristic.ACCURACY, "Ensemble Anomaly", _severity(e, high_t, critical_t),

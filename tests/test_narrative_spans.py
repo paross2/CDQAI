@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from types import SimpleNamespace
 import hashlib
 import numpy as np
@@ -32,6 +32,7 @@ def test_rule_records_late_trigger_and_preserves_unicode_offsets():
     payload = _narrative_payload(text, recorded_spans=spans)
     assert payload["evidenceSpans"][0]["text"] == "pain"
     assert _narrative_payload(text + " changed", recorded_spans=spans)["evidenceSpans"] == []
+    assert "do not match" in _narrative_payload(text + " changed", recorded_spans=spans)["evidenceExplanation"]
 
 
 def test_no_substring_or_false_statistical_claim_for_structured_finding():

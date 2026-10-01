@@ -1,5 +1,5 @@
-<!-- CDQAI file version: 2.3.5 -->
-# CDQAI 2.3.5 User Guide
+<!-- CDQAI file version: 2.3.6 -->
+# CDQAI 2.3.6 User Guide
 
 ## Purpose
 
@@ -28,11 +28,13 @@ Approved numeric crash fields are evaluated by an Isolation Forest after median 
 
 ### Narrative anomaly model
 
+Complete narratives are split into overlapping token-budgeted chunks. Their embeddings are pooled as a weighted mean plus an elementwise maximum, then scored together. Narrative and sentence-review coverage are shown separately in the dashboard. The first run after this upgrade rebuilds older truncated embedding caches.
+
 Narratives are transformed into semantic embeddings using `sentence-transformers/all-MiniLM-L6-v2`. An Isolation Forest identifies embeddings that are isolated from the broader narrative corpus. This can reflect rare events, unusual concept combinations, atypical language or structure, or other semantic differences. The result is percentile-ranked as `NarrativeScore_pct`.
 
 ### Evidence thresholds
 
-Default Version 2.3.5 thresholds are:
+Default Version 2.3.6 thresholds are:
 
 - Structured Anomaly: 99.0th percentile
 - Narrative Anomaly: 99.0th percentile
@@ -45,7 +47,7 @@ The dashboard displays values from the active configuration used for the run. Is
 
 ### Finding synthesis
 
-Evidence is grouped by MFN. The deterministic Finding Engine assigns a finding type, selects a primary issue, computes priority, and assembles the existing evidence messages into an explanation. Version 2.3.5 does not use Llama or another large language model.
+Evidence is grouped by MFN. The deterministic Finding Engine assigns a finding type, selects a primary issue, computes priority, and assembles the existing evidence messages into an explanation. Version 2.3.6 does not use Llama or another large language model.
 
 Records supported only by missing- or sparse-narrative evidence remain completeness findings. They enter the actionable queue only when another signal exists for the same MFN.
 

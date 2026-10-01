@@ -1,10 +1,11 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 import pandas as pd
 import json
 import pytest
 
 from cdqai import main
 from cdqai.smoke import run_smoke_test
+from cdqai.core.build_info import VERSION
 
 
 def test_smoke_is_isolated_from_private_config_and_data(tmp_path, monkeypatch):
@@ -30,6 +31,10 @@ def test_smoke_is_isolated_from_private_config_and_data(tmp_path, monkeypatch):
     payload = json.loads(payload_text.removeprefix("window.CDQAINarratives = ").strip().removesuffix(";"))
     assert any(row["evidenceSpans"] for row in payload.values())
     dashboard = (output / "dashboard.html").read_text(encoding="utf-8")
+    assert json.loads((output / "run_manifest.json").read_text())["version"] == VERSION
+    assert f"<title>CDQAI {VERSION}</title>" in dashboard
+    assert f"Evidence and Review Dashboard \u2014 Version {VERSION}" in dashboard
+    assert f"Version {VERSION} \u00b7 Kentucky Transportation Center" in dashboard
     assert 'data-narrative-status="highlighted"' in dashboard
     assert 'Finding MFNs with yellow narrative highlights' in dashboard
     assert 'id="print-flagged"' in dashboard

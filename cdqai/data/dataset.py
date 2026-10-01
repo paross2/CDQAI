@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
@@ -22,4 +22,5 @@ class CrashDataset:
     merged: pd.DataFrame
     metadata: DatasetMetadata
     context_summary: dict | None = None
+    narrative_analysis: pd.DataFrame | None = None
     person_severity_review: pd.DataFrame | None = None

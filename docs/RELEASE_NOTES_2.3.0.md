@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.5 -->
+<!-- CDQAI file version: 2.3.6 -->
 # CDQAI 2.3.0 — Narrative Evidence and Analyst Review
 
 This local release adds full-narrative yellow highlights for exact deterministic

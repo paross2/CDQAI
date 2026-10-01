@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 """Synchronize reviewed public text files without opening private inputs."""
 from __future__ import annotations
 
@@ -6,12 +6,27 @@ import argparse
 from datetime import date
 from pathlib import Path
 import re
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = "CDQAI file version:"
 VERSION_RE = re.compile(r"\d+\.\d+\.\d+")
 PRIVATE_ROOTS = {"cache", "logs", "outputs", ".venv", ".vscode", "context"}
+
+
+def inventory_gaps(root: Path) -> list[str]:
+    """Compare Git filenames only; never open files outside the public inventory."""
+    result = subprocess.run(
+        ["git", "-c", "safe.directory=" + root.resolve().as_posix(), "ls-files", "-z"],
+        cwd=root, capture_output=True, text=True, check=True,
+    )
+    tracked = set(filter(None, result.stdout.split("\0")))
+    maintained = set(release_paths(root))
+    excluded = {line.strip() for line in (root / "release-exclusions.txt").read_text(encoding="utf-8").splitlines()
+                if line.strip() and not line.startswith("#")}
+    overlap = maintained & excluded
+    return sorted((tracked - maintained - excluded) | overlap)
 
 
 def release_paths(root: Path) -> list[str]:
@@ -54,7 +69,7 @@ def with_marker(relative: str, text: str, version: str) -> str:
     elif suffix == ".bat":
         marker = f"REM {MARKER} {version}"
     elif (suffix in {".py", ".yaml", ".toml", ".cff"}
-          or Path(relative).name in {"requirements.txt", "requirements-dev.txt", "release-files.txt", ".gitignore", ".gitkeep"}):
+          or Path(relative).name in {"requirements.txt", "requirements-dev.txt", "release-files.txt", "release-exclusions.txt", ".gitignore", ".gitkeep"}):
         marker = f"# {MARKER} {version}"
     else:
         marker = f"{MARKER} {version}"
@@ -83,9 +98,11 @@ def synchronized_text(relative: str, text: str, old: str, version: str) -> str:
         text = re.sub(r"(?m)^version: .+$", f"version: {version}", text)
         if old != version:
             text = re.sub(r"(?m)^date-released: .+$", f"date-released: {date.today().isoformat()}", text)
-    elif relative in {"README.md", "INSTALL.txt", "How To Run.txt", "docs/USER_GUIDE.md", "docs/TECHNICAL_ARCHITECTURE.md"}:
-        # These are current-use documents. Historical release notes are not in the inventory.
+    elif relative in {"README.md", "INSTALL.txt", "How To Run.txt", "docs/USER_GUIDE.md", "docs/TECHNICAL_ARCHITECTURE.md", "docs/ANALYST_GUIDANCE.md", "docs/NARRATIVE_HIGHLIGHTS.md"}:
+        # Only these current-use documents have their prose updated. Historical bodies stay intact.
         text = re.sub(r"\b(Version |version |VERSION |CDQAI )\d+\.\d+\.\d+", lambda m: m[1] + version, text)
+        if relative == "README.md":
+            text = re.sub(r"docs/RELEASE_NOTES_\d+\.\d+\.\d+\.md", f"docs/RELEASE_NOTES_{version}.md", text)
     return with_marker(relative, text, version)
 
 
@@ -112,16 +129,23 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", help="Set a new MAJOR.MINOR.PATCH release and synchronize current files")
     parser.add_argument("--check", action="store_true", help="Report stale file versions without writing")
+    parser.add_argument("--check-git", action="store_true", help="Check that every tracked filename has a release policy; requires Git")
     args = parser.parse_args(argv)
-    if args.check and args.version:
+    if (args.check or args.check_git) and args.version:
         parser.error("Use --version to update, then --check to verify")
     try:
-        changes = synchronize(ROOT, version=args.version, check=args.check)
-    except (OSError, ValueError) as exc:
+        changes = synchronize(ROOT, version=args.version, check=args.check or args.check_git)
+        if args.check_git:
+            gaps = inventory_gaps(ROOT)
+            for relative in gaps:
+                print("Unclassified or conflicting Git path: " + relative)
+            if gaps:
+                return 1
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
         parser.exit(2, f"Version check failed: {exc}\n")
     for relative in changes:
-        print(("Stale: " if args.check else "Updated: ") + relative)
-    if args.check and changes:
+        print(("Stale: " if args.check or args.check_git else "Updated: ") + relative)
+    if (args.check or args.check_git) and changes:
         return 1
     print("Release file versions are synchronized.")
     return 0

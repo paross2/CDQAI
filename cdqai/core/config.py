@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.5
+# CDQAI file version: 2.3.6
 from __future__ import annotations
 
 from copy import deepcopy
@@ -103,7 +103,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "narrative": {
             "enabled": True,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "sentence_review": {"enabled": True, "max_records": 20},
+            "chunk_overlap_tokens": 32,
+            "sentence_review": {"enabled": True, "max_records": 20, "max_sentences": 12},
             "batch_size": 256,
             "contamination": 0.02,
             "random_state": 42,
