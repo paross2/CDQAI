@@ -1,5 +1,5 @@
 @echo off
-REM CDQAI file version: 2.3.6
+REM CDQAI file version: 2.3.7
 setlocal
 cd /d "%~dp0"
 set /p CDQAI_VERSION=<VERSION
@@ -17,6 +17,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo Version check passed for CDQAI %CDQAI_VERSION%.
-echo Complete docs\RELEASE_PREFLIGHT.md, including the Git inventory check, before publishing.
+echo Complete docs\RELEASE_PREFLIGHT.md, including the Git inventory check, before pushing main.
+echo Each main push triggers source-only verification and a formal GitHub release.
 echo This helper does not stage, commit, tag, upload files, or process crash data.
 pause

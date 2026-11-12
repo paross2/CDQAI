@@ -1,7 +1,7 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 [project]
 name = "cdqai"
-version = "2.3.6"
+version = "2.3.7"
 description = "Crash Data Quality Artificial Intelligence"
 requires-python = ">=3.11"
 

@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.6 -->
+<!-- CDQAI file version: 2.3.7 -->
 # Working on CDQAI
 
 ## Protected data
@@ -15,12 +15,13 @@ workbooks, private configuration, caches, logs, or outputs into that directory.
 
 ## Version consistency and publication
 
-`VERSION` is the release source of truth. Each maintained public text/code file
-listed in `release-files.txt` must carry the matching release marker. After any
-source/documentation update, run `python tools/release_version.py --check`. Add new
-maintained files explicitly to the inventory. To change releases, use
-`python tools/release_version.py --version X.Y.Z`, then update release notes and
-run the check. Never put private files or input data in the release inventory.
+`VERSION` is the release source of truth. Every push to `main` is a formal release:
+increase the version, synchronize every maintained public text/code file in
+`release-files.txt`, add release notes, update changelogs, and pass the release
+checks. The GitHub Actions workflow verifies the version bump, inventory, and
+source-only tests, then creates the tag and GitHub Release. Feature-branch pushes
+do not publish releases. Add new maintained files explicitly to the inventory.
+Never put private files or input data in the release inventory.
 
 Keep historical changelog entries, archived release notes, and external dataset
 versions intact. License bodies and copyright statements must be preserved;

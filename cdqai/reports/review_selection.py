@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 """Session-only crash selection and a local print report; no browser storage."""
 
 REVIEW_CONTROLS = '''<section class="review-controls"><h2>Flagged crash report</h2>

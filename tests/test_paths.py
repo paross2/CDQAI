@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 from cdqai.core.paths import find_project_root
 
 def test_project_root_found():

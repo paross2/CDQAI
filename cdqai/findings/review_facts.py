@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 """Grounded analyst breadcrumbs independent of an optional language model."""
 from __future__ import annotations
 

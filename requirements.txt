@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 PyYAML>=6.0
 pandas>=2.0
 numpy>=1.24

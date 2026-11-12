@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 """Opt-in Windows Edge check; all files live in pytest's disposable workspace."""
 import os
 from pathlib import Path

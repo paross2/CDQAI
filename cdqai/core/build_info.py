@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 from __future__ import annotations
 
 import importlib.metadata
@@ -11,11 +11,11 @@ from typing import Any
 
 PROJECT_NAME = "Crash Data Quality Artificial Intelligence"
 SHORT_NAME = "CDQAI"
-VERSION = "2.3.6"
+VERSION = "2.3.7"
 RELEASE_NAME = "AI Powered Crash Data Anomaly Detector"
 REPOSITORY_URL = "https://github.com/paross2/CDQAI"
 DEFAULT_BRANCH = "main"
-DEFAULT_TAG = "v2.3.6"
+DEFAULT_TAG = "v2.3.7"
 
 LEAD_DEVELOPER = "Paul Ross"
 LEAD_TITLE = "Research Scientist Principal"

@@ -1,0 +1,42 @@
+# CDQAI file version: 2.3.7
+name: Publish CDQAI release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install verification dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run source-only release verification
+        run: python tools/verify_release.py
+
+      - name: Verify version and release inventory
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: python tools/publish_github_release.py --check
+
+      - name: Publish GitHub release
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/publish_github_release.py

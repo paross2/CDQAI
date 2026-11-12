@@ -1,5 +1,11 @@
-<!-- CDQAI file version: 2.3.6 -->
+<!-- CDQAI file version: 2.3.7 -->
 # Changelog
+
+## 2.3.7 - Automated Main-Branch Releases
+
+- Publishes a formal GitHub Release after each successful push to `main`.
+- Verifies maintained file versions, tracked-path policy, and source-only tests before release.
+- Preserves historical documents, external workbooks, local configuration, and runtime data.
 
 ## 2.3.6 - AI Powered Crash Data Anomaly Detector
 

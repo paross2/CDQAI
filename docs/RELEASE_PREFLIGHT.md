@@ -1,7 +1,8 @@
-<!-- CDQAI file version: 2.3.6 -->
+<!-- CDQAI file version: 2.3.7 -->
 # Release version preflight
 
-Run this checklist for every release. `VERSION` is the intended source version;
+Run this checklist for every push to `main`; each such push is a release.
+`VERSION` is the intended source version;
 a GitHub release does not update local installations or previously generated HTML.
 Do not edit a report's version label to make an old analysis look newly generated.
 
@@ -24,7 +25,7 @@ Get-Content VERSION
 
 ## 2. Synchronize source and documentation
 
-- [ ] Choose the next release number, then run
+- [ ] Choose a version higher than the previous `main` version, then run
   `.\.venv\Scripts\python.exe tools/release_version.py --version X.Y.Z`.
 - [ ] Confirm `VERSION`, runtime `build_info.VERSION`, `DEFAULT_TAG`, package
   metadata, citation version/date, and example configuration agree.
@@ -75,11 +76,13 @@ them. Source archives without Git can use the first check only.
   release commit and GitHub release title. Describe incremental features in the notes.
 - [ ] Review exact staged names and `git diff --cached`, including version markers;
   run `git diff --cached --check`. Do not use `git add -A`.
-- [ ] Commit, create an unused annotated `vX.Y.Z` tag, and push `main` and the tag.
-  Never move an existing release tag or force-push to correct a version display.
-- [ ] Verify remote `main` and the peeled tag resolve to the reviewed commit.
-- [ ] Publish the GitHub release with the matching tag, title, and notes, and verify
-  its Latest status. GitHub's per-file last-commit labels are not application versions.
+- [ ] Commit and push `main`. The release workflow checks the version and inventory,
+  runs source-only tests, creates the matching tag and GitHub Release, and marks it
+  latest. Feature-branch pushes do not publish releases.
+- [ ] Verify the workflow succeeded and the remote `main`, tag, and GitHub release
+  resolve to the reviewed commit. Never move an existing release tag or force-push
+  to correct a version display. GitHub's per-file last-commit labels are not
+  application versions.
 - [ ] Check a fresh source download for metadata consistency. No generated private
   dashboard belongs in release assets.
 

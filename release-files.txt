@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 .gitignore
 AGENTS.md
 AUTHORS.md
@@ -142,3 +142,7 @@ tests/test_dashboard_browser.py
 cdqai/detectors/narrative_chunks.py
 tests/test_full_narratives.py
 docs/RELEASE_NOTES_2.3.6.md
+docs/RELEASE_NOTES_2.3.7.md
+.github/workflows/release.yaml
+tools/publish_github_release.py
+tests/test_publish_github_release.py

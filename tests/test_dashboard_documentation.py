@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 from copy import deepcopy
 
 from cdqai.core.config import CDQAIConfig, load_config

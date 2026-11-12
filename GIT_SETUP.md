@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.3.6 -->
+<!-- CDQAI file version: 2.3.7 -->
 # Publishing local CDQAI changes
 
 Complete [the release preflight checklist](docs/RELEASE_PREFLIGHT.md) before publishing.
@@ -12,18 +12,23 @@ GitHub's message beside a file or folder is its most recent commit message, not
 the version of the whole application. Historical documents and input workbooks
 retain their original contents and may continue to show older last-change messages.
 
-Before every Git update, run:
+Before every push to `main`, increase `VERSION` and run:
 
 ```powershell
 .\.venv\Scripts\python.exe tools/release_version.py --check
 ```
 
-To synchronize markers for the existing version, run the same command without
-`--check`. To prepare a new release, use `--version X.Y.Z` with the chosen version,
-then update release notes and review all changes. This updates version markers,
-current metadata, and current-use version references without rewriting dependency
-versions, license terms, or historical release notes. Add new maintained source
-files explicitly to `release-files.txt`; private inputs never belong in that list.
+To prepare the push, run the updater with the new version, for example
+`python tools/release_version.py --version X.Y.Z`, then add release notes and
+update both changelogs. The updater synchronizes every maintained public file and
+current-use version reference without rewriting dependency versions, license terms,
+or historical release notes. Add new maintained source files explicitly to
+`release-files.txt`; private inputs never belong in that list.
+
+Every successful push to `main` creates a formal GitHub Release. The workflow
+checks the version bump and complete tracked-file policy, runs source-only
+verification, and publishes the matching release notes and tag. Feature-branch
+pushes do not create releases. Do not push an unversioned change to `main`.
 
 `Release_CDQAI.bat` reads `VERSION` and runs the check. It does not stage, commit,
 tag, upload, or process data. Version-specific release batch files are retired.
@@ -68,8 +73,8 @@ DVMT workbooks are documented context data, not a precedent for adding crash exp
 
 After tests pass and the staged diff is reviewed, use this release commit and GitHub
 release title format: `Release CDQAI X.Y.Z: AI Powered Crash Data Anomaly Detector`.
-For 2.3.6, use `Release CDQAI 2.3.6: AI Powered Crash Data Anomaly Detector`.
 Keep incremental feature descriptions in the release notes rather than the title.
 Verify `git remote -v` locally and publish to the intended `paross2/CDQAI` remote and
-branch. Do not reinitialize an existing repository or create a release tag for routine
-development changes. Do not use force-add to bypass the private-file exclusions.
+`main` branch. The workflow creates the matching tag and release after the push.
+Do not reinitialize an existing repository or use force-add to bypass the private-file
+exclusions.

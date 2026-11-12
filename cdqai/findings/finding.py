@@ -1,4 +1,4 @@
-# CDQAI file version: 2.3.6
+# CDQAI file version: 2.3.7
 from __future__ import annotations
 from dataclasses import dataclass
 from cdqai.evidence.objects import Evidence

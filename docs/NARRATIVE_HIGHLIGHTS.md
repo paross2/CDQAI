@@ -1,5 +1,5 @@
-<!-- CDQAI file version: 2.3.6 -->
-# Narrative highlights in CDQAI 2.3.6
+<!-- CDQAI file version: 2.3.7 -->
+# Narrative highlights in CDQAI
 
 Expand a dashboard finding to see the complete narrative with yellow segments.
 Hover over a segment for its evidence method. Surrounding text remains visible.
