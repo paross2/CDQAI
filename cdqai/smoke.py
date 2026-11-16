@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """A repeatable local run using only fabricated records and isolated outputs."""
 from __future__ import annotations
 

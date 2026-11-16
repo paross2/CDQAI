@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # CDQAI 2.3.6 - AI Powered Crash Data Anomaly Detector
 
 - Scores complete narratives with overlapping token-budgeted chunks and combined weighted-mean/maximum features; no silent fallback to truncated inputs.

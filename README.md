@@ -1,7 +1,7 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # CDQAI — Crash Data Quality Artificial Intelligence
 
-**Version 2.5.0 — AI Powered Crash Data Anomaly Detector**
+**Version 2.5.1 — AI Powered Crash Data Anomaly Detector**
 
 CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
 
@@ -9,7 +9,7 @@ CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed fo
 
 ## How CDQAI Works
 
-Version 2.5.0 adds optional tabular contributing-factor review and paginates
+Version 2.5.1 adds optional tabular contributing-factor review and paginates
 **All Findings** for a more responsive dashboard. Factor filters use codes
 present in configured local tables only; a separate placeholder marks future
 narrative-derived factor review. It retains
@@ -124,7 +124,7 @@ Explanations are assembled from existing evidence messages. Duplicate messages a
 
 CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
 
-## Run Version 2.5.0 on Windows
+## Run Version 2.5.1 on Windows
 
 Close any open output CSV files, then double-click:
 
@@ -164,7 +164,7 @@ Or run:
 
 Model percentiles measure relative unusualness within the analyzed dataset; they are not probabilities of error. Crash data alone cannot fully measure accessibility, timeliness, or cross-system integration. Those characteristics require operational or external-system information beyond the crash record itself.
 
-See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.5.0.md` for additional detail.
+See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.5.1.md` for additional detail.
 
 
 ## Authorship, Funding, and Licensing

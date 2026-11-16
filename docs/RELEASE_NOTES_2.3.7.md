@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # CDQAI 2.3.7 - Automated Main-Branch Releases
 
 - Publishes a formal GitHub Release for each successful push to `main`.

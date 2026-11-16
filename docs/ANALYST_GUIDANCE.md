@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Analyst breadcrumbs and severity-aware review priority
 
 The deterministic finding engine remains step 6. Step 7 now adds recorded triggers,

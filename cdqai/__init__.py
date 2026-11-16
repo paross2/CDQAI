@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 import os
 # Runtime model assets must be installed separately before processing protected inputs.
 os.environ["HF_HUB_OFFLINE"] = "1"

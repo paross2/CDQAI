@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Kentucky contributing-factor codes used by the dashboard review filters."""
 
 FACTOR_CATALOGS = {

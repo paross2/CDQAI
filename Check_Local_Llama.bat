@@ -1,5 +1,5 @@
 @echo off
-REM CDQAI file version: 2.5.0
+REM CDQAI file version: 2.5.1
 setlocal
 cd /d "%~dp0"
 ".venv\Scripts\python.exe" -B tools\check_synthetic_ollama.py

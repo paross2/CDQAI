@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 from cdqai.core.config import load_config
 from cdqai.core.build_info import VERSION
 from cdqai.core.config import apply_application_metadata

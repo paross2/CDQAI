@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # CDQAI Architecture
 
 CDQAI is organized around stable architectural layers rather than temporary sprint folders.

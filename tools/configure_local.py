@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """User-run setup only. Never invoke against private configuration from an AI tool."""
 from __future__ import annotations
 

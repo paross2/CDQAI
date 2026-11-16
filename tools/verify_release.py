@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Run isolated synthetic tests in a temporary directory, removed on exit."""
 from contextlib import contextmanager
 from pathlib import Path

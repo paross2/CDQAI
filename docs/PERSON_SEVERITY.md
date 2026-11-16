@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Person severity reconciliation
 
 The configured crash-severity field remains the source used for priority

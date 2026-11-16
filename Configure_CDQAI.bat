@@ -1,5 +1,5 @@
 @echo off
-REM CDQAI file version: 2.5.0
+REM CDQAI file version: 2.5.1
 setlocal
 cd /d "%~dp0"
 if not exist ".venv\Scripts\python.exe" (

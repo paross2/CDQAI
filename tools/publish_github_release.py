@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Validate a main-branch version bump and publish its GitHub release."""
 from __future__ import annotations
 

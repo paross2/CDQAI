@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # CDQAI 2.3.2 — Plain-Language Analyst Guidance
 
 Local Llama drafts now explain related findings together in conversational language,

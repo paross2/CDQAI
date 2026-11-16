@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Optional person-severity review; crash-level severity remains authoritative."""
 from __future__ import annotations
 

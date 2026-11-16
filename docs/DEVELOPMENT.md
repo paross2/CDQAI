@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Local development
 
 Open the intended working checkout itself in VS Code. The code, configuration,

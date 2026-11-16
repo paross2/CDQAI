@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Optional step-7 drafts from an explicitly approved loopback Ollama service."""
 from __future__ import annotations
 

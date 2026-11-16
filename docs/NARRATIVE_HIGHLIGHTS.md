@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Narrative highlights in CDQAI
 
 Expand a dashboard finding to see the complete narrative with yellow segments.

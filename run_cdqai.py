@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 from cdqai.main import main
 
 if __name__ == "__main__":

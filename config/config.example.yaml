@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 person_severity:
   enabled: false
   table: "YOUR_DATABASE.YOUR_SCHEMA.YOUR_PERSON_DATA_SOURCE"
@@ -77,7 +77,7 @@ factor_review:
 project:
   name: "Crash Data Quality Artificial Intelligence"
   short_name: "CDQAI"
-  version: "2.5.0"
+  version: "2.5.1"
   milestone: "AI Powered Crash Data Anomaly Detector"
 
 paths:

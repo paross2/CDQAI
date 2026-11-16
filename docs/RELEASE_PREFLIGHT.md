@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Release version preflight
 
 Run this checklist for every push to `main`; each such push is a release.

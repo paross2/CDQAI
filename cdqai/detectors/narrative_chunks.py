@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Token-budgeted original-text spans and full-document features."""
 from dataclasses import dataclass
 import hashlib

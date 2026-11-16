@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Publishing local CDQAI changes
 
 Complete [the release preflight checklist](docs/RELEASE_PREFLIGHT.md) before publishing.

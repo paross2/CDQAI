@@ -1,4 +1,4 @@
-<!-- CDQAI file version: 2.5.0 -->
+<!-- CDQAI file version: 2.5.1 -->
 # Version audit - 2026-10-01
 
 Audit baseline: commit `0934052`, published software release **2.3.5**.

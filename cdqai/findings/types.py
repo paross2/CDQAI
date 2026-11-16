@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 from enum import StrEnum
 class FindingType(StrEnum):
     VALIDATION = "Validation"

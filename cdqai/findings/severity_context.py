@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 """Crash severity comes only from an explicitly configured, reviewed code mapping."""
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 from cdqai.evidence.bundle import EvidenceBundle
 from cdqai.evidence.engine import EvidenceCollection
 from cdqai.evidence.objects import Evidence

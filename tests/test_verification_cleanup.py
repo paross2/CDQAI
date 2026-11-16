@@ -1,4 +1,4 @@
-# CDQAI file version: 2.5.0
+# CDQAI file version: 2.5.1
 from pathlib import Path
 import pytest
 from tools.verify_release import verification_workspace
