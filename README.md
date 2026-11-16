@@ -1,0 +1,211 @@
+<!-- CDQAI file version: 2.5.0 -->
+# CDQAI — Crash Data Quality Artificial Intelligence
+
+**Version 2.5.0 — AI Powered Crash Data Anomaly Detector**
+
+CDQAI is a Kentucky-focused, AI-assisted crash-data review platform developed for the Kentucky Transportation Center. It combines transparent deterministic rules with structured and narrative anomaly models to identify records that warrant analyst review.
+
+> CDQAI reports evidence, not conclusions. A finding indicates that a record is incomplete, internally inconsistent, or statistically unusual. It does not establish that the record is incorrect.
+
+## How CDQAI Works
+
+Version 2.5.0 adds optional tabular contributing-factor review and paginates
+**All Findings** for a more responsive dashboard. Factor filters use codes
+present in configured local tables only; a separate placeholder marks future
+narrative-derived factor review. It retains
+[yellow narrative highlights](docs/NARRATIVE_HIGHLIGHTS.md), with exact rule matches
+and bounded model sentence sensitivity while retaining the full text.
+
+Optional [person severity reconciliation](docs/PERSON_SEVERITY.md) compares
+configured person-injury values with crash-level severity while preserving
+unresolved values for analyst review. It does not alter the model's crash rows.
+
+An optional, disabled-by-default local e-scooter classifier can flag narratives
+for review when matching configured vehicle records do not contain the configured
+scooter code. Training data and source mappings stay in ignored local
+configuration and are never included in the repository. See the User Guide for
+setup, codebook caveats, and holdout validation.
+
+### 1. Load and validate
+
+CDQAI loads crash and narrative data from locally configured sources. Crash
+identifiers are normalized into a common key, narrative text is normalized,
+required source fields are validated, and the sources are merged by that key.
+The merged dataset supports both deterministic rules and machine-learning models.
+
+### 2. Apply deterministic rules
+
+Deterministic rules are explicit, human-readable checks. They do not depend on statistical similarity or learned patterns.
+
+- **Missing narrative:** the narrative is null, blank, or whitespace only.
+- **Sparse narrative:** a nonblank narrative is shorter than the configured minimum. The default is 40 characters.
+- **Missing required field:** a field listed under `rules.required_fields` is null or blank.
+- **Narrative injury conflict:** injury-, EMS-, hospital-, fatality-, or death-related language is compared with available coded injury fields. Evidence is created when the narrative contains an injury signal and a configured coded field contains a configured no-injury value.
+
+A rule identifies an observable condition or possible inconsistency. It does not determine which value is correct.
+
+### 3. Score structured crash variables
+
+The structured model uses an Isolation Forest to evaluate unusual combinations of numeric coded crash variables. Identifiers, geographic coordinates, county codes, raw HHMM times, and context/provenance fields are excluded by the field-role policy. Infinite values are converted to missing and missing numeric values are filled with the median. Constant fields are excluded; there is no schema-order feature limit or first-N scoring-row truncation.
+
+Isolation Forest repeatedly partitions the data. Records isolated in fewer partitions are considered more unusual. CDQAI negates the model decision function so larger values represent greater unusualness, then converts scores to percentile ranks in `StructuredScore_pct`.
+
+The default contamination value is 0.02, meaning the model is fitted while expecting an approximate 2% outlier fraction. Contamination sets the model decision threshold; it is not the final evidence threshold.
+
+### 4. Score crash narratives
+
+Narratives are converted into semantic embeddings using `sentence-transformers/all-MiniLM-L6-v2`. The embeddings represent overall meaning, allowing narratives with similar concepts to be near one another even when they use different words.
+
+Every narrative is split into overlapping, token-budgeted chunks. The model processes all chunks; a token-weighted mean and elementwise maximum are combined into one full-narrative feature vector. This retains an overall representation and a channel for local signals. Cached embeddings are rebuilt when text, model weights, tokenizer, or chunk settings change.
+
+An Isolation Forest evaluates these embeddings. A narrative can score highly because it describes a rare event, combines unusual concepts, uses atypical language or structure, or is otherwise distant from common narrative patterns. The model does not rely on a fixed suspicious-word list. Scores are percentile-ranked in `NarrativeScore_pct`.
+
+### 5. Convert model scores into evidence
+
+The default ensemble calculation is:
+
+```text
+ModelEnsembleScore =
+    (0.5 × StructuredScore_pct)
+    +
+    (0.5 × NarrativeScore_pct)
+```
+
+The ensemble results are ranked again to produce `ModelConfidence`. Scores become formal evidence only after exceeding configured thresholds:
+
+| Evidence or severity | Default threshold | Interpretation |
+|---|---:|---|
+| Structured Anomaly | 99.0th percentile | Approximately the most unusual 1% of structured records |
+| Narrative Anomaly | 99.0th percentile | Approximately the most unusual 1% of narratives |
+| Ensemble Anomaly | 99.5th percentile | Approximately the most unusual 0.5% after combining both models |
+| High severity | 99.75th percentile | Approximately the most unusual 0.25% |
+| Critical severity | 99.9th percentile | Approximately the most unusual 0.1% |
+
+A Multi-Model Anomaly requires qualifying structured and narrative signals for the same MFN; the derived ensemble does not count as another independent signal. Blank narratives are not scored. Available model weights are renormalized, and ensemble evidence requires both models. Thresholds and weights are configurable in `config/config.yaml`.
+
+### 6. Synthesize findings by MFN
+
+CDQAI groups all rule and model evidence by the configured normalized crash key.
+The Finding Engine is deterministic. Optional local Llama drafts are added
+separately in step 7 and cannot change findings or scores.
+
+A finding containing only missing- or sparse-narrative evidence is treated as completeness information and excluded from the actionable queue unless another signal exists.
+
+The Finding Engine:
+
+1. assigns a finding type;
+2. selects the highest-severity and highest-confidence primary issue;
+3. calculates a priority score; and
+4. combines the evidence messages into a transparent analyst explanation.
+
+The priority formula is:
+
+```text
+Priority score =
+    2 × highest severity
+    + 2 × highest confidence
+    + source-diversity adjustment
+    + multi-source bonus
+    + bounded narrative-completeness adjustment
+```
+
+The source-diversity adjustment adds 0.75 for each additional substantive source, up to three additions. A 2-point bonus is added when at least two such sources agree. Completeness and derived summaries do not inflate these bonuses. Narrative severity/confidence contributions use crash-severity multipliers; completeness-only findings receive only their bounded adjustment and remain non-actionable. See [the priority policy](docs/ANALYST_GUIDANCE.md#priority-policy) for the provisional weights.
+
+| Priority | Score |
+|---|---:|
+| Critical | 13 or higher |
+| High | 10 to less than 13 |
+| Medium | 7 to less than 10 |
+| Low | Less than 7 |
+
+Explanations are assembled from existing evidence messages. Duplicate messages are removed. No generative model creates new evidence or determines ground truth.
+
+### 7. Produce reports
+
+CDQAI exports record-level evidence, synthesized findings, actionable and top-priority queues, annual findings summaries, model scores, run-level statistics, and an HTML dashboard. Annual summaries use the crash year associated with each MFN when a supported year field is available.
+
+## Run Version 2.5.0 on Windows
+
+Close any open output CSV files, then double-click:
+
+```text
+Run_CDQAI.bat
+```
+
+Or run:
+
+```powershell
+.\.venv\Scripts\python.exe run_cdqai.py --run-all
+```
+
+
+## Repository Layout
+
+- `cdqai/` — application source code
+- `config/` — local and example configuration
+- `tests/` — automated tests
+- `docs/` — architecture, methodology, and release documentation
+- `outputs/`, `cache/`, and `logs/` — generated runtime artifacts kept outside the application package
+
+`config/config.yaml` is intentionally ignored by Git because it may contain installation-specific database settings. Start from `config/config.example.yaml` when configuring a new installation.
+
+## Primary Outputs
+
+- `outputs/dashboard.html` — management and analyst dashboard
+- `outputs/dashboard_summary.csv` — run-level evidence counts
+- `outputs/evidence.csv` — all deterministic and model evidence
+- `outputs/findings.csv` — all synthesized findings
+- `outputs/actionable_findings.csv` — findings requiring substantive review
+- `outputs/top_findings.csv` — highest-priority analyst queue
+- `outputs/annual_findings.csv` — annual actionable-evidence trends
+- `outputs/model_scores.csv` — record-level model scores
+
+## Interpretation and Limitations
+
+Model percentiles measure relative unusualness within the analyzed dataset; they are not probabilities of error. Crash data alone cannot fully measure accessibility, timeliness, or cross-system integration. Those characteristics require operational or external-system information beyond the crash record itself.
+
+See `docs/USER_GUIDE.md`, `docs/TECHNICAL_ARCHITECTURE.md`, and `docs/RELEASE_NOTES_2.5.0.md` for additional detail.
+
+
+## Authorship, Funding, and Licensing
+
+CDQAI was conceived and led by **Paul Ross**, Research Scientist Principal, Kentucky Transportation Center, with contributions from **Nathaniel Swallom**, Research Scientist, Kentucky Transportation Center. Development was assisted by **OpenAI ChatGPT** as an engineering and documentation aid.
+
+Development was supported through **Federal Traffic Safety Information Systems (Section 405(c))** grant funding administered by the **Kentucky Office of Highway Safety (KOHS)** under the **Kentucky Transportation Cabinet (KYTC)**.
+
+Source code is licensed under the **MIT License**. Documentation is licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**. See `AUTHORS.md`, `LICENSE`, `LICENSE-DOCS`, and `CITATION.cff`.
+
+## Context-Aware Analysis
+
+CDQAI includes annual Kentucky county-level Mileage and Daily Vehicle Miles Traveled context for 1997–2025. CDQAI matches each crash to its exact context year when available, otherwise preferring the nearest prior year. County Number is retained for joining, filtering, and grouping but is excluded from global anomaly scoring by default.
+
+Add the newest official KYTC workbook to `context/kentucky_dvmt/raw/` each year. CDQAI reports the context year used, fallback type, year gap, source file, and freshness status rather than failing when an exact year is unavailable. The generated `analysis_field_manifest.csv` identifies fields used, retained, or excluded.
+
+## Dashboard pagination and narrative files
+
+All Findings is paginated (100 rows by default; 50 and 250 are also available).
+Filtering and sorting still cover the complete findings set, while only the
+current page is rendered. Finding details and narratives load from companion
+chunks when a record is expanded. Keep `dashboard.html`,
+`dashboard_findings_index.js`, and all `dashboard_finding_details_*.js` files
+from the same run together. `finding_evidence.parquet` remains the durable
+analyst-ready copy of full narratives and structured evidence spans; a CSV
+fallback is produced when Parquet support is unavailable.
+
+## Local development
+
+### Analyst breadcrumbs and crash-severity priority
+
+Expanded findings now include recorded triggers, observed field comparisons,
+and an explanation of their priority. Optional local Ollama/Llama drafts can
+provide additional evidence-referenced review suggestions in step 7; step 6
+remains deterministic. Drafts are disabled until explicitly configured.
+
+Blank narratives are excluded from semantic anomaly scoring. Missing/sparse
+narrative evidence contributes only a bounded severity-dependent priority bonus,
+and narrative-model priority is reduced for mapped B/C/O crashes. Configure the
+actual K/A/B/C/O severity column; missing/unmapped severity is not assumed minor.
+See [analyst guidance setup and policy](docs/ANALYST_GUIDANCE.md) for settings,
+limitations, local-only Ollama requirements, and provisional weights.
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for Python 3.11, VS Code, private configuration, tests, and the isolated synthetic run: `python -m cdqai.main --smoke-test`. The historical [development review](docs/DEVELOPMENT_REVIEW.md) describes the September 23 baseline; several issues have since been fixed.

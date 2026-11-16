@@ -1,0 +1,339 @@
+# CDQAI file version: 2.5.0
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+from cdqai.core.config import load_config
+from cdqai.core.logger import setup_logger
+from cdqai.core.manifest import write_run_manifest
+from cdqai.core.timing import timed_step
+from cdqai.data.cache import load_dataframe_cache, write_dataframe_cache
+from cdqai.data.database import DatabaseManager
+from cdqai.data.preprocessing import build_dataset, build_dataset_from_merged_cache
+from cdqai.reports.dataset_report import write_dataset_outputs
+from cdqai.reports.evidence_report import write_evidence_outputs
+from cdqai.reports.field_manifest import write_field_manifest
+from cdqai.rules.engine import RuleEngine
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="cdqai",
+        description="Crash Data Quality Artificial Intelligence command line interface.",
+    )
+    parser.add_argument("--health-check", action="store_true", help="Run a basic project health check.")
+    parser.add_argument("--load-data", action="store_true", help="Load, merge, summarize, and cache crash/narrative data.")
+    parser.add_argument("--run-models", action="store_true", help="Run structured and narrative model scoring.")
+    parser.add_argument("--run-rules", action="store_true", help="Run the Kentucky deterministic rule engine.")
+    parser.add_argument("--run-all", action="store_true", help="Run the unified evidence, finding, and dashboard pipeline.")
+    parser.add_argument(
+        "--dated-output",
+        action="store_true",
+        help="Create a unique dated output folder for --run-all.",
+    )
+    parser.add_argument("--smoke-test", action="store_true", help="Run synthetic records through structured scoring, rules, and reports without SQL or embedding downloads.")
+    parser.add_argument("--refresh-cache", action="store_true", help="Ignore existing cache and rebuild SQL/embedding caches.")
+    return parser
+
+
+def log_banner(logger, config, subtitle: str | None = None) -> None:
+    logger.info("===================================================")
+    logger.info("%s (%s)", config.project_name, config.short_name)
+    logger.info("Version: %s", config.version)
+    logger.info("Milestone: %s", config.milestone)
+    if subtitle:
+        logger.info("%s", subtitle)
+    logger.info("Project root: %s", config.project_root)
+    logger.info("===================================================")
+
+
+def _create_dated_output_directory(config, run_time: datetime | None = None) -> Path:
+    timestamp = (run_time or datetime.now()).strftime("%m__%d_%Y_%H-%M")
+    output_dir = config.outputs_dir / f"test_run_live_{timestamp}"
+    output_dir.mkdir(parents=False, exist_ok=False)
+    config.raw["paths"]["outputs_dir"] = str(output_dir)
+    return output_dir
+
+
+def run_health_check() -> int:
+    config = load_config()
+    logger = setup_logger(config.logs_dir, config.log_level)
+
+    log_banner(logger, config)
+
+    logger.info("Cache directory: %s", config.cache_dir)
+    logger.info("Logs directory: %s", config.logs_dir)
+    logger.info("Outputs directory: %s", config.outputs_dir)
+    logger.info("CDQAI health check completed successfully.")
+    return 0
+
+
+def load_dataset(config, logger, refresh_cache: bool = False):
+    from cdqai.data.person_severity import attach_person_severity
+    cached_merged = None
+
+    if config.use_cache and not refresh_cache:
+        with timed_step(logger, "Checking merged dataframe cache"):
+            cached_merged = load_dataframe_cache(config.merged_cache_path, logger)
+
+    if cached_merged is not None:
+        with timed_step(logger, "Building dataset from merged cache"):
+            dataset = build_dataset_from_merged_cache(cached_merged, config, logger)
+            return attach_person_severity(dataset, config, logger)
+
+    with timed_step(logger, "Connecting to SQL Server"):
+        db = DatabaseManager(config=config, logger=logger)
+        db.test_connection()
+
+    with timed_step(logger, "Loading crash records"):
+        crashes = db.load_crashes()
+
+    with timed_step(logger, "Loading narrative records"):
+        narratives = db.load_narratives()
+
+    with timed_step(logger, "Building merged CrashDataset"):
+        dataset = build_dataset(crashes, narratives, config, logger)
+
+    if config.write_cache:
+        with timed_step(logger, "Writing merged dataframe cache"):
+            write_dataframe_cache(dataset.merged, config.merged_cache_path, logger)
+
+    return attach_person_severity(dataset, config, logger, db=db)
+
+
+def run_data_pipeline(refresh_cache: bool = False) -> int:
+    start = time.perf_counter()
+    config = load_config()
+    logger = setup_logger(config.logs_dir, config.log_level)
+
+    log_banner(logger, config, "Data pipeline starting.")
+
+    try:
+        dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
+
+        with timed_step(logger, "Writing dataset outputs"):
+            write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
+
+        elapsed = time.perf_counter() - start
+        manifest_path = write_run_manifest(config, elapsed, dataset.metadata)
+        logger.info("Run manifest written: %s", manifest_path)
+        logger.info("CDQAI data pipeline completed successfully.")
+        return 0
+
+    except Exception:
+        logger.exception("CDQAI data pipeline failed.")
+        return 1
+
+
+def run_models(refresh_cache: bool = False) -> int:
+    # Lazy imports keep health-check and rule-only workflows from requiring optional ML packages.
+    from cdqai.detectors.model_runner import run_model_scoring
+    from cdqai.reports.model_report import write_model_outputs
+
+    start = time.perf_counter()
+    config = load_config()
+    logger = setup_logger(config.logs_dir, config.log_level)
+
+    log_banner(logger, config, "Model scoring pipeline starting.")
+
+    try:
+        dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
+
+        with timed_step(logger, "Writing dataset outputs"):
+            write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
+
+        with timed_step(logger, "Running model scoring"):
+            scores, model_metadata = run_model_scoring(
+                dataset,
+                config,
+                logger,
+                refresh_cache=refresh_cache,
+            )
+
+        with timed_step(logger, "Writing model outputs"):
+            write_model_outputs(dataset, scores, config, logger)
+
+        elapsed = time.perf_counter() - start
+        manifest_path = write_run_manifest(config, elapsed, dataset.metadata, model_metadata=model_metadata)
+        logger.info("Run manifest written: %s", manifest_path)
+        logger.info("CDQAI model scoring completed successfully.")
+        return 0
+
+    except Exception:
+        logger.exception("CDQAI model scoring failed.")
+        return 1
+
+
+def run_rules(refresh_cache: bool = False) -> int:
+    start = time.perf_counter()
+    config = load_config()
+    logger = setup_logger(config.logs_dir, config.log_level)
+
+    log_banner(logger, config, "Kentucky Rule Engine starting.")
+
+    try:
+        dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
+
+        with timed_step(logger, "Writing dataset outputs"):
+            write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
+
+        with timed_step(logger, "Running Kentucky Rule Engine"):
+            evidence = RuleEngine(config=config, logger=logger).run(dataset)
+
+        with timed_step(logger, "Writing evidence outputs"):
+            write_evidence_outputs(evidence, config, logger)
+
+        elapsed = time.perf_counter() - start
+        rule_metadata = {
+            "evidence_count": len(evidence.items),
+            "evidence_records": len(evidence.by_mfn()),
+        }
+        manifest_path = write_run_manifest(
+            config,
+            elapsed,
+            dataset.metadata,
+            model_metadata={"rules": rule_metadata},
+        )
+        logger.info("Run manifest written: %s", manifest_path)
+        logger.info("CDQAI Kentucky Rule Engine completed successfully.")
+        return 0
+
+    except Exception:
+        logger.exception("CDQAI Kentucky Rule Engine failed.")
+        return 1
+
+
+
+def run_all(
+    refresh_cache: bool = False,
+    *,
+    config=None,
+    dataset=None,
+    dated_output: bool = False,
+) -> int:
+    from cdqai.detectors.model_runner import run_model_scoring
+    from cdqai.detectors.scooter import build_scooter_evidence
+    from cdqai.evidence.engine import EvidenceCollection
+    from cdqai.evidence.model_evidence import build_model_evidence
+    from cdqai.findings.engine import FindingEngine
+    from cdqai.llm.analyst_guidance import add_analyst_guidance
+    from cdqai.reports.dashboard_report import write_dashboard
+    from cdqai.reports.finding_report import write_finding_outputs
+    from cdqai.reports.model_report import write_model_outputs
+
+    start = time.perf_counter()
+    config = config if config is not None else load_config()
+    output_dir = None
+    if dated_output:
+        try:
+            output_dir = _create_dated_output_directory(config)
+        except OSError:
+            logger = setup_logger(config.logs_dir, config.log_level)
+            log_banner(logger, config, "Unified evidence pipeline could not prepare its dated output folder.")
+            logger.exception("Could not create a unique dated output directory.")
+            return 1
+        config.raw["paths"]["logs_dir"] = str(output_dir)
+    logger = setup_logger(config.logs_dir, config.log_level)
+    log_banner(logger, config, "Unified evidence pipeline starting.")
+    try:
+        if output_dir is not None:
+            logger.info("Run-specific outputs directory: %s", output_dir)
+        if dataset is None:
+            dataset = load_dataset(config, logger, refresh_cache=refresh_cache)
+        with timed_step(logger, "Writing dataset outputs"):
+            write_dataset_outputs(dataset, config, logger)
+            write_field_manifest(dataset, config, logger)
+        if config.raw.get("factor_review", {}).get("enabled") is True:
+            with timed_step(logger, "Loading projected contributing-factor codes"):
+                if dataset.factor_records is None:
+                    db = DatabaseManager(config=config, logger=logger)
+                    db.test_connection()
+                    dataset.factor_records = db.load_factor_records()
+        with timed_step(logger, "Running deterministic rules"):
+            rule_evidence = RuleEngine(config=config, logger=logger).run(dataset)
+        scooter_evidence = EvidenceCollection(items=[])
+        scooter_metadata = {"enabled": 0, "candidate_count": 0}
+        if config.raw.get("scooter_classifier", {}).get("enabled") is True:
+            with timed_step(logger, "Loading projected scooter vehicle codes"):
+                if dataset.vehicle_type_records is None:
+                    db = DatabaseManager(config=config, logger=logger)
+                    db.test_connection()
+                    dataset.vehicle_type_records = db.load_vehicle_type_records()
+            with timed_step(logger, "Scoring local scooter narrative classifier"):
+                scooter_evidence, _, scooter_metadata = build_scooter_evidence(dataset, config)
+            logger.info("Potential uncoded e-scooter candidates: %s", scooter_metadata["candidate_count"])
+        with timed_step(logger, "Running model scoring"):
+            scores, model_metadata = run_model_scoring(dataset, config, logger, refresh_cache=refresh_cache)
+        with timed_step(logger, "Writing model outputs"):
+            write_model_outputs(dataset, scores, config, logger)
+        with timed_step(logger, "Converting model scores to evidence"):
+            model_evidence = build_model_evidence(scores, config)
+        evidence = EvidenceCollection(items=[
+            *rule_evidence.items, *model_evidence.items, *scooter_evidence.items
+        ])
+        with timed_step(logger, "Writing unified evidence outputs"):
+            write_evidence_outputs(evidence, config, logger)
+        with timed_step(logger, "Synthesizing analyst findings"):
+            findings = FindingEngine().run(evidence, dataset=dataset, config=config)
+        with timed_step(logger, "Preparing analyst review guidance"):
+            findings, guidance_metadata = add_analyst_guidance(findings, config, logger)
+        with timed_step(logger, "Writing findings"):
+            write_finding_outputs(findings, dataset, config, logger)
+        with timed_step(logger, "Writing dashboard"):
+            write_dashboard(dataset, evidence, findings, config, logger)
+        elapsed = time.perf_counter() - start
+        metadata = dict(model_metadata)
+        metadata["analyst_guidance"] = guidance_metadata
+        metadata.update({
+            "rule_evidence": len(rule_evidence.items),
+            "model_evidence": len(model_evidence.items),
+            "scooter_classifier": scooter_metadata,
+            "scooter_evidence": len(scooter_evidence.items),
+            "findings": len(findings),
+        })
+        write_run_manifest(config, elapsed, dataset.metadata, model_metadata=metadata)
+        logger.info("CDQAI unified evidence pipeline completed successfully.")
+        logger.info("Run outputs and log: %s", config.outputs_dir)
+        return 0
+    except Exception:
+        logger.exception("CDQAI unified evidence pipeline failed.")
+        return 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.smoke_test:
+        if any((args.run_all, args.run_rules, args.run_models, args.load_data, args.refresh_cache, args.health_check, args.dated_output)):
+            parser.error("--smoke-test must be used on its own")
+        from cdqai.smoke import run_smoke_test
+        return run_smoke_test()
+
+    if args.run_all:
+        return run_all(refresh_cache=args.refresh_cache, dated_output=args.dated_output)
+
+    if args.dated_output:
+        parser.error("--dated-output can only be used with --run-all")
+
+    if args.run_rules:
+        return run_rules(refresh_cache=args.refresh_cache)
+
+    if args.run_models:
+        return run_models(refresh_cache=args.refresh_cache)
+
+    if args.load_data:
+        return run_data_pipeline(refresh_cache=args.refresh_cache)
+
+    return run_health_check()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,9 @@
+CDQAI VERSION 2.0.0 INSTALLATION
+
+1. Back up or commit the current repository.
+2. Copy this package over the repository root, preserving folders.
+3. Keep the local config/config.yaml file with your internal database settings.
+4. Activate the existing .venv and install requirements if needed.
+5. Run: .\.venv\Scripts\python.exe -m pytest
+6. Close output CSV files and run Run_CDQAI_2.0.bat.
+7. Review outputs\dashboard.html and outputs\top_findings.csv.

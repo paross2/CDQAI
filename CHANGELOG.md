@@ -1,0 +1,249 @@
+<!-- CDQAI file version: 2.5.0 -->
+# Changelog
+
+## 2.5.1 - Public Configuration Privacy
+
+- Replaces provider-specific record labels and source mappings in public code and documentation with generic crash, vehicle, and person concepts.
+- Uses generic placeholders for public source configuration and keeps real local source mappings in ignored configuration.
+- Changes optional-feature setup to preserve existing local data sources and cache names.
+
+## 2.5.0 - Contributing-Factor Review
+
+- Adds optional Human, Environmental, and Vehicle factor-code loading with explicit local table mappings and projected MFN/year/code columns only.
+- Adds per-category multi-select filters to All Findings (OR within a category, AND across categories) using only codes present in configured tabular data, plus year-aware coded-factor details.
+- Clearly distinguishes unavailable tabular data from code 99 (None Detected) and adds a separate placeholder for future narrative-derived factors.
+- Moves the flagged crash report beneath Top Actionable Findings and scopes expand/collapse controls to each findings block.
+- Removes the separate scooter MFN-only PDF control; e-scooter findings remain in the findings tables.
+- Paginates All Findings with full-set filtering/sorting and on-demand detail and narrative chunks to keep the dashboard responsive.
+
+## 2.4.0 - Local E-Scooter Narrative Review
+
+- Adds an opt-in TF-IDF/Logistic Regression narrative classifier trained from a user-configured local CSV with a stratified holdout precision check.
+- Compares candidate narratives with a minimal configured crash-identifier/year/unit-code projection and creates review-only evidence when the configured scooter code is absent.
+- Adds a separate MFN-only dashboard PDF export; training data, server settings, narratives, and scores are not included in that export.
+- Keeps the feature disabled by default and documents that unit type code 12 is provisional and model scores are not calibrated probabilities.
+
+## 2.3.7 - Automated Main-Branch Releases
+
+- Publishes a formal GitHub Release after each successful push to `main`.
+- Verifies maintained file versions, tracked-path policy, and source-only tests before release.
+- Preserves historical documents, external workbooks, local configuration, and runtime data.
+
+## 2.3.6 - AI Powered Crash Data Anomaly Detector
+
+- Scores complete narratives with overlapping token-budgeted chunks and combined weighted-mean/maximum features; no silent fallback to truncated inputs.
+- Rebuilds embedding caches when ordered record/text hashes, model weights, tokenizer, software stack, or chunk settings change. Cache integrity checks reject older or mismatched arrays.
+- Re-encodes the full remaining narrative during sentence-removal review; preserves original offsets for highlights and reports complete/limited/unavailable review separately.
+- Exports coverage in model scores, finding evidence, dashboard companion data, and manifest summary. Keeps duplicate-ID previews aligned with their original rows.
+- Includes the pending dashboard Expand all/Collapse all controls, accurate highlight guidance, release preflight audit, and automatic temporary-workspace cleanup.
+
+## 2.3.5 - Reliable Yellow Narrative Highlights
+
+- Builds on the published 2.3.2 release, retaining analyst guidance, selected-crash PDF reports, severity-aware prioritization, and recorded rule/model narrative spans.
+- Normalizes expand-button MFNs to match narrative companion keys, so numeric IDs such as 123.0 load the correct narrative.
+- Uses bright yellow highlighting with explicit dark text for supported narrative evidence.
+- Adds end-to-end coverage for triggers beyond character 500, Unicode offsets, and narrative lookup from expanded findings.
+- Synchronizes every maintained public release file to 2.3.5 using the release inventory.
+
+## 2.3.2 — Plain-Language Analyst Guidance (2026-09-30)
+
+- Ask local Llama to combine related evidence, explain limits, and suggest concrete checks.
+- Supply bounded recorded sentence-sensitivity excerpts; avoid repetitive derived summaries.
+- Uncoded-human-factor discovery remains future work and is not implemented.
+
+## 2.3.1 — Analyst Review and Selected-Crash Reports (2026-09-30)
+
+- Published the accumulated local 2.3.0 feature work with synchronized 2.3.1 file markers.
+- Includes narrative highlights, severity review, local Llama drafts, review flags, and selected-crash printing.
+- See [2.3.1 release notes](docs/RELEASE_NOTES_2.3.1.md) for scope and validation limits.
+
+## 2.3.0 - Narrative evidence and analyst review
+
+- Added session-only per-crash review flags and a selected-crash print/PDF report without analyst notes.
+
+- Local setup now configures optional review features without changing private source mappings.
+
+- Added exact full-narrative rule spans and bounded model sentence-removal sensitivity.
+- Yellow highlights retain surrounding narrative text and label the evidence method.
+- Protected spans against mismatched narratives and corrected Unicode browser offsets.
+
+- Added CountyCode DVMT alias, offline embedding-model loading, and safe Llama failure codes.
+- Constrained draft field/evidence identifiers and kept rejected drafts from cancelling other findings.
+- Added a fabricated-only local Llama diagnostic launcher.
+
+- Added optional person-severity comparison, a local review CSV, and discrepancy evidence.
+- Preserved unresolved severity values for analyst review; configured crash severity remains the priority source.
+
+- Added recorded field comparisons and priority rationale to expanded findings.
+- Added optional local Ollama/Llama review drafts after deterministic finding synthesis.
+- Excluded blank narratives from semantic scoring and removed derived-signal double counting.
+- Added configurable K/A/B/C/O narrative priority multipliers and bounded completeness bonuses.
+- Added synthetic regression coverage; real-data review and model setup remain local user tasks.
+
+## Maintenance on main - release-file consistency
+
+- Added synchronized CDQAI file-version markers to maintained public text/code,
+  licenses, and empty runtime-directory placeholders.
+- Added a reviewed release inventory, an update/check command, and regression tests.
+- Replaced the stale version-named release script with `Release_CDQAI.bat`, which
+  reads `VERSION` and checks consistency without automatically staging or publishing.
+- Updated current guides and roadmap; preserved historical release records,
+  input workbooks, license terms, and the published v2.2.5 tag.
+
+## 2.2.5 - Local Setup and Synthetic Validation (2026-09-23)
+
+- Added an isolated `--smoke-test` command using 128 fabricated records, structured scoring, deterministic rules, findings, and dashboard generation.
+- Deferred narrative-model imports until narrative scoring is enabled.
+- Added `requirements-dev.txt`, beginner instructions in `How To Run.txt`, and local development and publication guidance.
+- Removed the release test's dependency on ignored private configuration.
+- Corrected setup/version documentation and documented implementation priorities.
+- Production scoring weights, thresholds, and rules are unchanged. Protected data and local runtime artifacts are excluded from this release.
+
+See `docs/RELEASE_NOTES_2.2.5.md` for validation scope and upgrade instructions.
+
+## 2.2.4 — Reliable Narrative MFN Matching
+
+- Canonicalizes MFNs before narrative joins, including integer, string, and `.0` forms.
+- Selects the longest nonblank narrative when duplicate MFN rows exist.
+- Uses both merged and source narrative frames to populate dashboard evidence.
+- Adds regression tests for MFN normalization and duplicate narrative handling.
+
+## 2.2.3 — Lightweight On-Demand Narrative Evidence
+
+- Moved complete narrative payloads out of `dashboard.html` into `dashboard_narratives.js`.
+- Added on-demand rendering when a finding row is expanded.
+- Added persisted `finding_evidence.parquet` with full narratives and structured evidence spans.
+- Added explicit missing-narrative warnings and analyst spot-check instructions.
+- Preserved direct rule phrase highlighting without false token attribution for embedding-only anomalies.
+
+
+## 2.2.2 — Transparent Narrative Evidence
+
+- Added narratives and rule-grounded phrase highlighting to expanded dashboard findings.
+- Added Git, Windows 11, GPU, AI-stack, model, and system provenance reporting.
+- Added explicit attribution limitations for embedding-only narrative anomalies.
+
+## 2.2.1 — Field-Safe Context-Aware Analysis
+
+- Excluded latitude, longitude, coordinate, County Number, context, identifier, and raw HHMM fields from global structured anomaly scoring.
+- Replaced numeric-type-only selection with a shared field-role classifier used by both modeling and the field manifest.
+- Removed schema-order-based first-N feature truncation.
+- Replaced blanket zero filling with median imputation for approved numeric features.
+- Removed unnecessary RobustScaler processing from Isolation Forest.
+- Added regression tests proving valid geolocation and county changes cannot alter structured anomaly scores.
+- Removed the obsolete `rules/` directory and placeholder `rules.json` from the distribution.
+- Added configuration for explicit reviewed feature allow-lists and field aliases.
+
+## 2.2.0 — Context-Aware Analysis
+
+- Added annual county-level Kentucky DVMT and roadway mileage context for 1997–2025.
+- Added exact-year matching with prior-year-preferred and future-year-last-resort fallback.
+- Added context provenance, year-gap, freshness, urban/rural, county, and exposure fields to the analytical dataset.
+- Added graceful degradation when context files or join fields are unavailable.
+- Excluded County Number and all derived context fields from global Isolation Forest scoring by default.
+- Added a downloadable analysis field manifest showing field roles, eligibility, exclusions, missingness, and cardinality.
+- Added annual-update guidance and normalized Parquet caching for efficient large-data runs.
+
+# CDQAI Changelog
+
+## 2.1.2 — Collapsible Dashboard & Findings Explorer
+
+- Added collapsible accordion sections for How CDQAI Works, About CDQAI, Top Actionable Findings, and All Findings.
+- Added a complete findings explorer with text search, Primary Issue, Evidence Strength, Analyst Priority, and confidence-range filters.
+- Added ascending and descending sorting for findings columns and a live visible-findings count.
+- Standardized the project directory and launcher/document names to `CDQAI`, `Run_CDQAI.bat`, and `INSTALL.txt`.
+- No analytical models, evidence rules, or scoring behavior changed.
+
+
+## 2.1.1 — Build Metadata & Provenance
+
+- Added centralized build metadata and runtime provenance.
+- Added developer, contributor, AI-assistance, and funding attribution.
+- Added MIT software license and CC BY 4.0 documentation license.
+- Added citation metadata and dashboard About/Provenance content.
+- Corrected stale current-release version references and filenames.
+
+# Changelog
+
+## 2.0.2 — Annual Reporting Reliability
+
+### Fixed
+
+- Added robust `CrashYear` mapping using explicit year fields, including `YR`.
+- Added collision-date fallback parsing for supported date fields.
+- Restored populated annual findings output.
+
+### Changed
+
+- Updated release metadata and Windows launcher to Version 2.0.2.
+- Expanded Git exclusions and removed compiled Python artifacts.
+- Added standard release metadata and runtime-folder placeholders.
+
+## 2.0.1 — Documentation and Transparency Update
+
+- Expanded the dashboard and documentation to explain the implemented deterministic rules, structured Isolation Forest, narrative embeddings, evidence thresholds, ensemble calculation, finding synthesis, priority formula, and limitations.
+- Made the dashboard explanation read active configuration values rather than hard-code thresholds and rule settings.
+- Added regression tests for configuration-driven threshold display and accurate disclosure of deterministic, non-LLM finding synthesis.
+- Added Version 2.0.1 release notes.
+
+## Version 1.4.0 — Evidence Framework
+
+### Added
+
+- Kentucky-specific record type definitions.
+- Kentucky traffic records system definitions.
+- Traffic records quality characteristic definitions.
+- Severity definitions.
+- Evidence dataclass.
+- EvidenceBundle dataclass.
+- Evidence summary helpers.
+- Evidence report writer.
+- README version history.
+
+## Version 1.3.0 — Model Layer
+
+### Added
+
+- Structured anomaly detector.
+- Narrative embedding manager.
+- Narrative anomaly detector.
+- Embedding cache.
+- Combined model score output.
+- Model output report files.
+
+## Version 1.2.0 — Data Layer
+
+### Added
+
+- DatabaseManager.
+- CrashDataset and DatasetMetadata.
+- SQL Server data loading.
+- MFN normalization and merge pipeline.
+- Parquet caching.
+- Dataset summary and run manifest outputs.
+
+## Version 1.1.0 — Foundation
+
+### Added
+
+- CDQAI project foundation.
+- Configuration loader.
+- Logging system.
+- Runtime folder creation.
+- CLI health check.
+- Initial package structure.
+- Documentation scaffolding.
+
+## 2.0.0 — Unified Evidence Platform
+- Integrated structured, narrative, ensemble, and multi-model evidence.
+- Added MFN-level finding synthesis and priority ranking.
+- Added actionable, top-finding, annual, dashboard, and summary reports.
+- Added Windows launcher and Version 2.0 documentation.
+- Clarified that CDQAI reports evidence rather than conclusions.
+
+## 2.1.0 — Responsive Analyst Decision Support
+
+- Replaced the wide dashboard findings table with a compact, expandable analyst queue.
+- Added responsive viewport-based layout, horizontal table containment, sticky headers, wrapping, print rules, and client-side sorting.
+- Added deterministic `ConfidenceScore`, `EvidenceAgreement`, `EvidenceStrength`, `AnalystPriority`, and `RecommendedAction` fields to finding exports.
+- Preserved the existing priority score and evidence synthesis logic for backward compatibility.
